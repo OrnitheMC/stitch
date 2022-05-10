@@ -22,18 +22,19 @@ import org.objectweb.asm.commons.Remapper;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class JarClassEntry extends AbstractJarEntry {
-    String fullyQualifiedName;
+public class JarClassEntry extends AbstractJarEntry
+{
     final Map<String, JarClassEntry> innerClasses;
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
     final Map<String, Set<Pair<JarClassEntry, String>>> relatedMethods;
-
+    String fullyQualifiedName;
     String signature;
     String superclass;
     List<String> interfaces;
     List<String> subclasses;
     List<String> implementers;
+    byte[] bytecode;
 
     protected JarClassEntry(String name, String fullyQualifiedName) {
         super(name);
@@ -48,11 +49,12 @@ public class JarClassEntry extends AbstractJarEntry {
         this.implementers = new ArrayList<>();
     }
 
-    protected void populate(int access, String signature, String superclass, String[] interfaces) {
+    protected void populate(int access, String signature, String superclass, String[] interfaces, byte[] bytecode) {
         this.setAccess(access);
         this.signature = signature;
         this.superclass = superclass;
         this.interfaces = Arrays.asList(interfaces);
+        this.bytecode = bytecode;
     }
 
     protected void populateParents(ClassStorage storage) {
@@ -98,6 +100,10 @@ public class JarClassEntry extends AbstractJarEntry {
         return toClassEntryList(storage, interfaces);
     }
 
+    public byte[] getBytecode() {
+        return bytecode;
+    }
+
     public List<String> getSubclassNames() {
         return Collections.unmodifiableList(subclasses);
     }
@@ -120,9 +126,9 @@ public class JarClassEntry extends AbstractJarEntry {
         }
 
         return stringList.stream()
-                .map((s) -> storage.getClass(s, false))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+              .map((s) -> storage.getClass(s, false))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
     }
 
     public JarClassEntry getInnerClass(String name) {

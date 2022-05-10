@@ -2,13 +2,12 @@ plugins {
 	id "java"
 	id "java-library"
 	id "maven-publish"
-	id "net.minecrell.licenser" version "0.4.1"
 }
 
-sourceCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_17
 
 def ENV = System.getenv()
-version = "0.6.1" + (ENV.GITHUB_ACTIONS ? "" : "+local")
+version = "0.6.2-ornithe" + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 group = 'net.fabricmc'
 archivesBaseName = project.name.toLowerCase()
@@ -30,23 +29,18 @@ configurations {
 }
 
 dependencies {
-	ship 'org.ow2.asm:asm:9.1'
-	ship 'org.ow2.asm:asm-commons:9.1'
-	ship 'org.ow2.asm:asm-tree:9.1'
-	ship 'org.ow2.asm:asm-util:9.1'
+	ship 'org.ow2.asm:asm:9.3'
+	ship 'org.ow2.asm:asm-commons:9.3'
+	ship 'org.ow2.asm:asm-tree:9.3'
+	ship 'org.ow2.asm:asm-util:9.3'
 	ship 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
-	implementation 'com.google.guava:guava:28.0-jre'
-	compileOnly 'org.jetbrains:annotations:20.1.0'
+	implementation 'com.google.guava:guava:31.1-jre'
+	compileOnly 'org.jetbrains:annotations:23.0.0'
 
 	enigma 'cuchaz:enigma:0.23.2'
 
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
-}
-
-license {
-	header project.file("HEADER")
-	include "**/*.java"
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 }
 
 jar {
@@ -78,10 +72,6 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = "UTF-8"
-
-	if (JavaVersion.current().isJava9Compatible()) {
-		it.options.release = 8
-	}
 }
 
 publishing {
@@ -116,7 +106,7 @@ task checkVersion {
 	doFirst {
 		def xml = new URL("https://maven.fabricmc.net/net/fabricmc/stitch/maven-metadata.xml").text
 		def metadata = new XmlSlurper().parseText(xml)
-		def versions = metadata.versioning.versions.version*.text();
+		def versions = metadata.versioning.versions.version*.text()
 		if (versions.contains(version)) {
 			throw new RuntimeException("${version} has already been released!")
 		}

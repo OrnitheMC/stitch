@@ -35,28 +35,42 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-class GenState {
+class GenState
+{
     private final Map<String, Integer> counters = new HashMap<>();
     private final Map<AbstractJarEntry, Integer> values = new IdentityHashMap<>();
+    private final Scanner scanner = new Scanner(System.in);
+    private final List<Pattern> obfuscatedPatterns = new ArrayList<>();
+    private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
     private GenMap oldToIntermediary, newToOld;
     private GenMap newToIntermediary;
-    private boolean interactive = true;
-    private boolean writeAll = false;
-    private Scanner scanner = new Scanner(System.in);
-
     private String targetNamespace = "net/minecraft/";
-    private final List<Pattern> obfuscatedPatterns = new ArrayList<Pattern>();
 
     public GenState() {
         this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default ofbfuscation. Minecraft classes without a package are obfuscated.
     }
 
-    public void setWriteAll(boolean writeAll) {
-        this.writeAll = writeAll;
+    public static boolean isMappedClass(ClassStorage storage, JarClassEntry c) {
+        return !c.isAnonymous();
     }
 
-    public void disableInteractive() {
-        interactive = false;
+    public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
+        return isUnmappedFieldName(f.getName());
+    }
+
+    public static boolean isUnmappedFieldName(String name) {
+        return name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_');
+    }
+
+    public static boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
+        return isUnmappedMethodName(m.getName()) && m.isSource(storage, c);
+    }
+
+    public static boolean isUnmappedMethodName(String name) {
+        return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_')) && name.charAt(0) != '<';
+    }
+
+    public void setWriteAll() {
     }
 
     public String next(AbstractJarEntry entry, String name) {
@@ -82,30 +96,22 @@ class GenState {
         this.obfuscatedPatterns.add(Pattern.compile(regex));
     }
 
-    public void setCounter(String key, int value) {
-        counters.put(key, value);
-    }
-
-    public Map<String, Integer> getCounters() {
-        return Collections.unmodifiableMap(counters);
-    }
-
     public void generate(File file, JarRootEntry jarEntry, JarRootEntry jarOld) throws IOException {
         if (file.exists()) {
             System.err.println("Target file exists - loading...");
             newToIntermediary = new GenMap();
             try (FileInputStream inputStream = new FileInputStream(file)) {
                 newToIntermediary.load(
-                        MappingsProvider.readTinyMappings(inputStream),
-                        "official",
-                        "intermediary"
+                      MappingsProvider.readTinyMappings(inputStream),
+                      "official",
+                      "intermediary"
                 );
             }
         }
 
         try (FileWriter fileWriter = new FileWriter(file)) {
             try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
-                writer.write("v1\tofficial\tintermediary\n");
+                writer.write("v1\tofficial\tcalamus\n");
 
                 for (JarClassEntry c : jarEntry.getClasses()) {
                     addClass(writer, c, jarOld, jarEntry, this.targetNamespace);
@@ -114,26 +120,6 @@ class GenState {
                 writeCounters(writer);
             }
         }
-    }
-
-    public static boolean isMappedClass(ClassStorage storage, JarClassEntry c) {
-        return !c.isAnonymous();
-    }
-
-    public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
-        return isUnmappedFieldName(f.getName());
-    }
-
-    public static boolean isUnmappedFieldName(String name) {
-        return name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_');
-    }
-
-    public static boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
-        return isUnmappedMethodName(m.getName()) && m.isSource(storage, c);
-    }
-
-    public static boolean isUnmappedMethodName(String name) {
-       return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_')) && name.charAt(0) != '<';
     }
 
     @Nullable
@@ -173,8 +159,6 @@ class GenState {
 
         return next(f, "field");
     }
-
-    private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
 
     private String getPropagation(ClassStorage storage, JarClassEntry classEntry) {
         if (classEntry == null) {
@@ -305,9 +289,10 @@ class GenState {
 
                 for (int i = 0; i < nameList.size(); i++) {
                     String s = nameList.get(i);
-                    System.out.println((i+1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
+                    System.out.println((i + 1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
                 }
 
+                boolean interactive = true;
                 if (!interactive) {
                     throw new RuntimeException("Conflict detected!");
                 }
@@ -353,7 +338,7 @@ class GenState {
         String cname = "";
         String prefixSaved = translatedPrefix;
 
-        if(!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
+        if (this.obfuscatedPatterns.stream().noneMatch(p -> p.matcher(className).matches())) {
             translatedPrefix = c.getFullyQualifiedName();
         } else {
             if (!isMappedClass(storage, c)) {
@@ -410,9 +395,9 @@ class GenState {
 
             if (fName != null) {
                 writer.write("FIELD\t" + c.getFullyQualifiedName()
-                        + "\t" + f.getDescriptor()
-                        + "\t" + f.getName()
-                        + "\t" + fName + "\n");
+                      + "\t" + f.getDescriptor()
+                      + "\t" + f.getName()
+                      + "\t" + fName + "\n");
             }
         }
 
@@ -420,15 +405,15 @@ class GenState {
             String mName = getMethodName(storageOld, storage, c, m);
             if (mName == null) {
                 if (!m.getName().startsWith("<") && m.isSource(storage, c)) {
-                   mName = m.getName();
+                    mName = m.getName();
                 }
             }
 
             if (mName != null) {
                 writer.write("METHOD\t" + c.getFullyQualifiedName()
-                        + "\t" + m.getDescriptor()
-                        + "\t" + m.getName()
-                        + "\t" + mName + "\n");
+                      + "\t" + m.getDescriptor()
+                      + "\t" + m.getName()
+                      + "\t" + mName + "\n");
             }
         }
 
@@ -446,9 +431,9 @@ class GenState {
 
         try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
             oldToIntermediary.load(
-                    MappingsProvider.readTinyMappings(inputStream),
-                    "official",
-                    "intermediary"
+                  MappingsProvider.readTinyMappings(inputStream),
+                  "official",
+                  "intermediary"
             );
         }
     }
@@ -462,9 +447,9 @@ class GenState {
 
         try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
             oldToIntermediary.load(
-                    MappingsProvider.readTinyMappings(inputStream),
-                    "official",
-                    "intermediary"
+                  MappingsProvider.readTinyMappings(inputStream),
+                  "official",
+                  "intermediary"
             );
         }
 

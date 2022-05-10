@@ -53,10 +53,8 @@ public class CommandRewriteIntermediary extends Command {
         GenState state = new GenState();
 
         for (int i = 3; i < args.length; i++) {
-            switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "--writeall":
-                    state.setWriteAll(true);
-                    break;
+            if ("--writeall".equals(args[i].toLowerCase(Locale.ROOT))) {
+                state.setWriteAll();
             }
         }
 

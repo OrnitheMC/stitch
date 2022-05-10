@@ -17,6 +17,8 @@
 package net.fabricmc.stitch.representation;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 
 public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
@@ -24,13 +26,15 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
     final File file;
     final Map<String, JarClassEntry> classTree;
     final List<JarClassEntry> allClasses;
+    final byte[] bytes;
 
-    public JarRootEntry(File file) {
+    public JarRootEntry(File file) throws IOException {
         super(file.getName());
 
         this.file = file;
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
         this.allClasses = new ArrayList<>();
+        this.bytes = Files.readAllBytes(file.toPath());
     }
 
     @Override
@@ -79,5 +83,9 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
 
     public Collection<JarClassEntry> getAllClasses() {
         return Collections.unmodifiableList(allClasses);
+    }
+
+    public byte[] getBytes() {
+        return bytes;
     }
 }

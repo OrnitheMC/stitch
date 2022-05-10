@@ -53,20 +53,17 @@ public class CommandGenerateIntermediary extends Command {
 
         for (int i = 2; i < args.length; i++) {
             switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "-t":
-                case "--target-namespace":
+                case "-t", "--target-namespace" -> {
                     state.setTargetNamespace(args[i + 1]);
                     i++;
-                    break;
-                case "-p":
-                case "--obfuscation-pattern":
+                }
+                case "-p", "--obfuscation-pattern" -> {
                     if (!clearedPatterns)
                         state.clearObfuscatedPatterns();
                     clearedPatterns = true;
-
                     state.addObfuscatedPattern(args[i + 1]);
                     i++;
-                    break;
+                }
             }
         }
 
