@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +18,17 @@
 package net.fabricmc.stitch.representation;
 
 import net.fabricmc.stitch.util.StitchUtil;
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.jar.JarInputStream;
 
 public class JarReader
@@ -53,12 +60,13 @@ public class JarReader
                     ClassVisitor visitor = new ClassVisitor(StitchUtil.ASM_VERSION, null)
                     {
                         private JarClassEntry classEntry;
+                        private long startedAt;
 
+                        @SuppressWarnings("deprecation")
                         @Override
                         public void visit(final int version, final int access, final String name, final String signature,
                                           final String superName, final String[] interfaces) {
-                            this.classEntry = jar.getClass(name, true);
-
+                            startedAt = System.nanoTime();
                             byte[] bytes;
                             if (finalEntry.getSize() < reader.b.length) {
                                 bytes = Arrays.copyOf(reader.b, (int) finalEntry.getSize());
@@ -66,13 +74,14 @@ public class JarReader
                                 bytes = reader.b;
                             }
 
-                            this.classEntry.populate(access, signature, superName, interfaces, bytes);
+                            var classEntry = new JarClassEntry.ClassEntryPopulator(access, signature, superName, interfaces, bytes);
+                            this.classEntry = jar.getClass(name, classEntry, true);
                         }
 
                         @Override
                         public FieldVisitor visitField(final int access, final String name, final String descriptor,
                                                        final String signature, final Object value) {
-                            JarFieldEntry field = new JarFieldEntry(access, name, descriptor, signature);
+                            JarFieldEntry field = new JarFieldEntry(access, name, descriptor, signature, this.classEntry);
                             this.classEntry.fields.put(field.getKey(), field);
 
                             return null;
@@ -81,10 +90,16 @@ public class JarReader
                         @Override
                         public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
                                                          final String signature, final String[] exceptions) {
-                            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature);
+                            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature, this.classEntry);
                             this.classEntry.methods.put(method.getKey(), method);
 
                             return null;
+                        }
+
+                        @Override
+                        public void visitEnd() {
+                            long timeSpan = System.nanoTime() - startedAt;
+                            System.err.println("Loaded " + this.classEntry.getName() + " in " + timeSpan + "ns");
                         }
                     };
                     reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +27,11 @@ import java.util.*;
  * where it could get away with naming them differently.
  */
 public class ClassPropagationTree {
-    private final ClassStorage jar;
+    private final JarRootEntry jar;
     private final Set<JarClassEntry> relevantClasses;
     private final Set<JarClassEntry> topmostClasses;
 
-    public ClassPropagationTree(ClassStorage jar, JarClassEntry baseClass) {
+    public ClassPropagationTree(JarRootEntry jar, JarClassEntry baseClass) {
         this.jar = jar;
         relevantClasses = StitchUtil.newIdentityHashSet();
         topmostClasses = StitchUtil.newIdentityHashSet();

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +17,20 @@
 
 package net.fabricmc.stitch.representation;
 
+import net.fabricmc.stitch.Main;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 
-public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
+public class JarRootEntry extends AbstractJarEntry
+{
     final Object syncObject = new Object();
     final File file;
     final Map<String, JarClassEntry> classTree;
     final List<JarClassEntry> allClasses;
-    final byte[] bytes;
+    final byte[] jarHash;
 
     public JarRootEntry(File file) throws IOException {
         super(file.getName());
@@ -34,11 +38,10 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
         this.file = file;
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
         this.allClasses = new ArrayList<>();
-        this.bytes = Files.readAllBytes(file.toPath());
+        this.jarHash = Main.MESSAGE_DIGEST.digest(Files.readAllBytes(file.toPath()));
     }
 
-    @Override
-    public JarClassEntry getClass(String name, boolean create) {
+    public JarClassEntry getClass(String name, JarClassEntry.ClassEntryPopulator populator, boolean create) {
         if (name == null) {
             return null;
         }
@@ -49,7 +52,7 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
         JarClassEntry parent;
         JarClassEntry entry = classTree.get(nameSplit[i++]);
         if (entry == null && create) {
-            entry = new JarClassEntry(nameSplit[0], nameSplit[0]);
+            entry = new JarClassEntry(nameSplit[0], nameSplit[0], populator, this);
             synchronized (syncObject) {
                 allClasses.add(entry);
                 classTree.put(entry.getName(), entry);
@@ -66,7 +69,7 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
             entry = entry.getInnerClass(nameSplit[i++]);
 
             if (entry == null && create) {
-                entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString());
+                entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString(), populator, this);
                 synchronized (syncObject) {
                     allClasses.add(entry);
                     parent.innerClasses.put(entry.getName(), entry);
@@ -85,7 +88,8 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
         return Collections.unmodifiableList(allClasses);
     }
 
-    public byte[] getBytes() {
-        return bytes;
+    @Override
+    public byte[] getHash() {
+        return jarHash;
     }
 }

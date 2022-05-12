@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +18,17 @@
 package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.*;
+import net.fabricmc.stitch.representation.JarReader;
+import net.fabricmc.stitch.representation.JarRootEntry;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 
-public class CommandUpdateIntermediary extends Command {
-    public CommandUpdateIntermediary() {
-        super("updateIntermediary");
+public class CommandUpdateCalamus extends Command
+{
+    public CommandUpdateCalamus() {
+        super("updateCalamus");
     }
 
     @Override

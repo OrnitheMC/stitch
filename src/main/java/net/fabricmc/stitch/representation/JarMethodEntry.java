@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +17,29 @@
 
 package net.fabricmc.stitch.representation;
 
+import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.StitchUtil;
+import org.apache.commons.lang3.ArrayUtils;
 import org.objectweb.asm.commons.Remapper;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
-public class JarMethodEntry extends AbstractJarEntry {
+public class JarMethodEntry extends AbstractJarEntry
+{
+    final byte[] saltedMethodHash;
     protected String desc;
     protected String signature;
 
-    protected JarMethodEntry(int access, String name, String desc, String signature) {
+    protected JarMethodEntry(int access, String name, String desc, String signature, JarClassEntry parentClass) {
         super(name);
         this.setAccess(access);
         this.desc = desc;
         this.signature = signature;
+
+        Main.MESSAGE_DIGEST.update(parentClass.getHash());
+        byte[] bytes = ArrayUtils.addAll(ByteBuffer.allocate(4).putInt(getAccess()).array(), getKey().getBytes());
+        this.saltedMethodHash = Main.MESSAGE_DIGEST.digest(bytes);
     }
 
     public String getDescriptor() {
@@ -45,7 +55,12 @@ public class JarMethodEntry extends AbstractJarEntry {
         return super.getKey() + desc;
     }
 
-    public boolean isSource(ClassStorage storage, JarClassEntry c) {
+    @Override
+    public byte[] getHash() {
+        return saltedMethodHash;
+    }
+
+    public boolean isSource(JarRootEntry storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return true;
         }
@@ -56,7 +71,7 @@ public class JarMethodEntry extends AbstractJarEntry {
         return entries.size() == 1;
     }
 
-    public List<JarClassEntry> getMatchingEntries(ClassStorage storage, JarClassEntry c) {
+    public List<JarClassEntry> getMatchingEntries(JarRootEntry storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return Collections.singletonList(c);
         }
@@ -82,12 +97,12 @@ public class JarMethodEntry extends AbstractJarEntry {
             entriesNew.clear();
         }
 
-	    entries.removeIf(cc -> cc.getMethod(getKey()) == null);
+        entries.removeIf(cc -> cc.getMethod(getKey()) == null);
 
         return new ArrayList<>(entries);
     }
 
-    void getMatchingSources(Collection<JarClassEntry> entries, ClassStorage storage, JarClassEntry c) {
+    void getMatchingSources(Collection<JarClassEntry> entries, JarRootEntry storage, JarClassEntry c) {
         JarMethodEntry m = c.getMethod(getKey());
         if (m != null) {
             if (!Access.isPrivateOrStatic(m.getAccess())) {
@@ -105,7 +120,7 @@ public class JarMethodEntry extends AbstractJarEntry {
         }
     }
 
-    void getMatchingEntries(Collection<JarClassEntry> entries, ClassStorage storage, JarClassEntry c, int indent) {
+    void getMatchingEntries(Collection<JarClassEntry> entries, JarRootEntry storage, JarClassEntry c, int indent) {
         entries.add(c);
 
         for (JarClassEntry cc : c.getSubclasses(storage)) {

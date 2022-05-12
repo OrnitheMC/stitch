@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +23,9 @@ import net.fabricmc.stitch.representation.*;
 import java.io.*;
 import java.util.Locale;
 
-public class CommandGenerateIntermediary extends Command {
-    public CommandGenerateIntermediary() {
-        super("generateIntermediary");
+public class CommandGenerateCalamus extends Command {
+    public CommandGenerateCalamus() {
+        super("generateCalamus");
     }
 
     @Override

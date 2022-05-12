@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +26,7 @@ public class StitchEnigmaPlugin implements EnigmaPlugin {
 	@Override
 	public void init(EnigmaPluginContext ctx) {
 		StitchNameProposalService.register(ctx);
-		ctx.registerService("stitch:intermediary_obfuscation_test", ObfuscationTestService.TYPE, StitchIntermediaryObfuscationTestService::new);
+		ctx.registerService("stitch:calamus_obfuscation_test", ObfuscationTestService.TYPE, StitchCalamusObfuscationTestService::new);
 	}
 
 }

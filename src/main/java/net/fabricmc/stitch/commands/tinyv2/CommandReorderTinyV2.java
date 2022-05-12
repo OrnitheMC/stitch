@@ -40,17 +40,17 @@ import net.fabricmc.stitch.Command;
  * For example:
  * <p>
  * This:
- * intermediary                 named                                  official
+ * calamus                 named                                  official
  * c     net/minecraft/class_123      net/minecraft/somePackage/someClass    a
  * m   (Lnet/minecraft/class_124;)V  method_1234 someMethod    a
  * <p>
- * Reordered to official intermediary named:
- * official       intermediary                 named
+ * Reordered to official calamus named:
+ * official       calamus                 named
  * c     a              net/minecraft/class_123      net/minecraft/somePackage/someClass
  * m   (La;)V  a   method_1234                 someMethod
  * <p>
- * This is used to reorder the the official-intermediary mappings to be intermediary-official, so they can be merged with
- * intermediary-named in CommandMergeTinyV2, and then reorder the outputted intermediary-official-named to official-intermediary-named.
+ * This is used to reorder the the official-calamus mappings to be calamus-official, so they can be merged with
+ * calamus-named in CommandMergeTinyV2, and then reorder the outputted calamus-official-named to official-calamus-named.
  */
 public class CommandReorderTinyV2 extends Command {
 	public CommandReorderTinyV2() {
@@ -59,7 +59,7 @@ public class CommandReorderTinyV2 extends Command {
 
 	/**
 	 * Reorders the columns in <old-mapping-file> according to [new name order...] and puts the result in <new-mapping-file>.
-	 * new name order is for example "official intermediary named"
+	 * new name order is for example "official calamus named"
 	 */
 	@Override
 	public String getHelpString() {

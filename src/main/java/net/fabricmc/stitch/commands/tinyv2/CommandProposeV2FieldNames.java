@@ -45,7 +45,7 @@ public class CommandProposeV2FieldNames extends Command {
 	/**
 	 * <input jar> is any Minecraft jar, and <input mappings> are mappings of that jar (the same version).
 	 * <input mappings> with the additional field names will be written to <output mappings>.+
-	 * Assumes the input mappings are intermediary->yarn mappings!
+	 * Assumes the input mappings are calamus->yarn mappings!
 	 * <should replace> is a boolean ("true" or "false") deciding if existing yarn names should be replaced by the generated names.
 	 */
 	@Override

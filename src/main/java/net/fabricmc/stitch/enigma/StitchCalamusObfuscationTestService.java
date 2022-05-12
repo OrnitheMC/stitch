@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +24,10 @@ import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 
-public class StitchIntermediaryObfuscationTestService implements ObfuscationTestService {
+public class StitchCalamusObfuscationTestService implements ObfuscationTestService {
 	private final String prefix, classPrefix, classPackagePrefix, fieldPrefix, methodPrefix;
 
-	public StitchIntermediaryObfuscationTestService(EnigmaServiceContext<ObfuscationTestService> context) {
+	public StitchCalamusObfuscationTestService(EnigmaServiceContext<ObfuscationTestService> context) {
 		this.prefix = context.getArgument("package").orElse("net/minecraft") + "/";
 		this.classPrefix = context.getArgument("classPrefix").orElse("class_");
 		this.fieldPrefix = context.getArgument("fieldPrefix").orElse("field_");

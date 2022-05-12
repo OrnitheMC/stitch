@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,8 @@
 
 package net.fabricmc.stitch.representation;
 
-public abstract class AbstractJarEntry {
+public abstract class AbstractJarEntry
+{
     protected String name;
     protected int access;
 
@@ -39,6 +41,8 @@ public abstract class AbstractJarEntry {
     protected String getKey() {
         return name;
     }
+
+    public abstract byte[] getHash();
 
     @Override
     public boolean equals(Object other) {

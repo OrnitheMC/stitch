@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +17,8 @@
 
 package net.fabricmc.stitch.representation;
 
+import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.Pair;
-import org.objectweb.asm.commons.Remapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,15 +29,15 @@ public class JarClassEntry extends AbstractJarEntry
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
     final Map<String, Set<Pair<JarClassEntry, String>>> relatedMethods;
-    String fullyQualifiedName;
-    String signature;
+    final String fullyQualifiedName;
+    final String signature;
+    final byte[] saltedClassHash;
     String superclass;
     List<String> interfaces;
     List<String> subclasses;
     List<String> implementers;
-    byte[] bytecode;
 
-    protected JarClassEntry(String name, String fullyQualifiedName) {
+    protected JarClassEntry(String name, String fullyQualifiedName, ClassEntryPopulator populator, JarRootEntry parentJar) {
         super(name);
 
         this.fullyQualifiedName = fullyQualifiedName;
@@ -45,19 +46,19 @@ public class JarClassEntry extends AbstractJarEntry
         this.methods = new TreeMap<>(Comparator.naturalOrder());
         this.relatedMethods = new HashMap<>();
 
+        this.setAccess(populator.access());
+        this.signature = populator.signature();
+        this.superclass = populator.superclass();
+        this.interfaces = Arrays.asList(populator.interfaces());
+
+        Main.MESSAGE_DIGEST.update(parentJar.getHash());
+        this.saltedClassHash = Main.MESSAGE_DIGEST.digest(populator.bytecode());
+
         this.subclasses = new ArrayList<>();
         this.implementers = new ArrayList<>();
     }
 
-    protected void populate(int access, String signature, String superclass, String[] interfaces, byte[] bytecode) {
-        this.setAccess(access);
-        this.signature = signature;
-        this.superclass = superclass;
-        this.interfaces = Arrays.asList(interfaces);
-        this.bytecode = bytecode;
-    }
-
-    protected void populateParents(ClassStorage storage) {
+    protected void populateParents(JarRootEntry storage) {
         JarClassEntry superEntry = getSuperClass(storage);
         if (superEntry != null) {
             superEntry.subclasses.add(fullyQualifiedName);
@@ -88,27 +89,28 @@ public class JarClassEntry extends AbstractJarEntry
         return superclass;
     }
 
-    public JarClassEntry getSuperClass(ClassStorage storage) {
-        return storage.getClass(superclass, false);
+    public JarClassEntry getSuperClass(JarRootEntry storage) {
+        return storage.getClass(superclass, null, false);
     }
 
     public List<String> getInterfaceNames() {
         return Collections.unmodifiableList(interfaces);
     }
 
-    public List<JarClassEntry> getInterfaces(ClassStorage storage) {
+    public List<JarClassEntry> getInterfaces(JarRootEntry storage) {
         return toClassEntryList(storage, interfaces);
     }
 
-    public byte[] getBytecode() {
-        return bytecode;
+    @Override
+    public byte[] getHash() {
+        return saltedClassHash;
     }
 
     public List<String> getSubclassNames() {
         return Collections.unmodifiableList(subclasses);
     }
 
-    public List<JarClassEntry> getSubclasses(ClassStorage storage) {
+    public List<JarClassEntry> getSubclasses(JarRootEntry storage) {
         return toClassEntryList(storage, subclasses);
     }
 
@@ -116,17 +118,17 @@ public class JarClassEntry extends AbstractJarEntry
         return Collections.unmodifiableList(implementers);
     }
 
-    public List<JarClassEntry> getImplementers(ClassStorage storage) {
+    public List<JarClassEntry> getImplementers(JarRootEntry storage) {
         return toClassEntryList(storage, implementers);
     }
 
-    private List<JarClassEntry> toClassEntryList(ClassStorage storage, List<String> stringList) {
+    private List<JarClassEntry> toClassEntryList(JarRootEntry storage, List<String> stringList) {
         if (stringList == null) {
             return Collections.emptyList();
         }
 
         return stringList.stream()
-              .map((s) -> storage.getClass(s, false))
+              .map((s) -> storage.getClass(s, null, false))
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
     }
@@ -168,51 +170,5 @@ public class JarClassEntry extends AbstractJarEntry
         return getFullyQualifiedName();
     }
 
-    public void remap(Remapper remapper) {
-        String oldName = fullyQualifiedName;
-        fullyQualifiedName = remapper.map(fullyQualifiedName);
-        String[] s = fullyQualifiedName.split("\\$");
-        name = s[s.length - 1];
-
-        if (superclass != null) {
-            superclass = remapper.map(superclass);
-        }
-
-        interfaces = interfaces.stream().map(remapper::map).collect(Collectors.toList());
-        subclasses = subclasses.stream().map(remapper::map).collect(Collectors.toList());
-        implementers = implementers.stream().map(remapper::map).collect(Collectors.toList());
-
-        Map<String, JarClassEntry> innerClassOld = new HashMap<>(innerClasses);
-        Map<String, JarFieldEntry> fieldsOld = new HashMap<>(fields);
-        Map<String, JarMethodEntry> methodsOld = new HashMap<>(methods);
-        Map<String, String> methodKeyRemaps = new HashMap<>();
-
-        innerClasses.clear();
-        fields.clear();
-        methods.clear();
-
-        for (Map.Entry<String, JarClassEntry> entry : innerClassOld.entrySet()) {
-            entry.getValue().remap(remapper);
-            innerClasses.put(entry.getValue().name, entry.getValue());
-        }
-
-        for (Map.Entry<String, JarFieldEntry> entry : fieldsOld.entrySet()) {
-            entry.getValue().remap(this, oldName, remapper);
-            fields.put(entry.getValue().getKey(), entry.getValue());
-        }
-
-        for (Map.Entry<String, JarMethodEntry> entry : methodsOld.entrySet()) {
-            entry.getValue().remap(this, oldName, remapper);
-            methods.put(entry.getValue().getKey(), entry.getValue());
-            methodKeyRemaps.put(entry.getKey(), entry.getValue().getKey());
-        }
-
-        // TODO: remap relatedMethods strings???
-        Map<String, Set<Pair<JarClassEntry, String>>> relatedMethodsOld = new HashMap<>(relatedMethods);
-        relatedMethods.clear();
-
-        for (Map.Entry<String, Set<Pair<JarClassEntry, String>>> entry : relatedMethodsOld.entrySet()) {
-            relatedMethods.put(methodKeyRemaps.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue());
-        }
-    }
+    public record ClassEntryPopulator(int access, String signature, String superclass, String[] interfaces, byte[] bytecode) { }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +17,27 @@
 
 package net.fabricmc.stitch.representation;
 
+import net.fabricmc.stitch.Main;
+import org.apache.commons.lang3.ArrayUtils;
 import org.objectweb.asm.commons.Remapper;
 
-public class JarFieldEntry extends AbstractJarEntry {
+import java.nio.ByteBuffer;
+
+public class JarFieldEntry extends AbstractJarEntry
+{
+    final byte[] saltedFieldHash;
     protected String desc;
     protected String signature;
 
-    JarFieldEntry(int access, String name, String desc, String signature) {
+    JarFieldEntry(int access, String name, String desc, String signature, JarClassEntry parentClass) {
         super(name);
         this.setAccess(access);
         this.desc = desc;
         this.signature = signature;
+
+        Main.MESSAGE_DIGEST.update(parentClass.getHash());
+        byte[] bytes = ArrayUtils.addAll(ByteBuffer.allocate(4).putInt(getAccess()).array(), getKey().getBytes());
+        this.saltedFieldHash = Main.MESSAGE_DIGEST.digest(bytes);
     }
 
     public String getDescriptor() {
@@ -40,6 +51,11 @@ public class JarFieldEntry extends AbstractJarEntry {
     @Override
     protected String getKey() {
         return super.getKey() + desc;
+    }
+
+    @Override
+    public byte[] getHash() {
+        return saltedFieldHash;
     }
 
     public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {

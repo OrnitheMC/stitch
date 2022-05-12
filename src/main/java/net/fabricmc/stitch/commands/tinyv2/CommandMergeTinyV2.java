@@ -51,25 +51,25 @@ import net.fabricmc.stitch.util.Pair;
  * For example:
  * <p>
  * Input A:
- * intermediary                 named
+ * calamus                 named
  * c    net/minecraft/class_123      net/minecraft/somePackage/someClass
  * m   (Lnet/minecraft/class_124;)V  method_1234 someMethod
  * <p>
  * Input B:
- * intermediary                 official
+ * calamus                 official
  * c    net/minecraft/class_123      a
  * m   (Lnet/minecraft/class_124;)V  method_1234 a
  * <p>
  * The output will be:
  * <p>
- * intermediary                 named                                  official
+ * calamus                 named                                  official
  * c    net/minecraft/class_123      net/minecraft/somePackage/someClass    a
  * m   (Lnet/minecraft/class_124;)V  method_1234 someMethod    a
  * <p>
  * <p>
- * After intermediary-named mappings are obtained,
- * and official-intermediary mappings are obtained and swapped using CommandReorderTinyV2, Loom merges them using this command,
- * and then reorders it to official-intermediary-named using CommandReorderTinyV2 again.
+ * After calamus-named mappings are obtained,
+ * and official-calamus mappings are obtained and swapped using CommandReorderTinyV2, Loom merges them using this command,
+ * and then reorders it to official-calamus-named using CommandReorderTinyV2 again.
  * This is a convenient way of storing all the mappings in Loom.
  */
 public class CommandMergeTinyV2 extends Command {

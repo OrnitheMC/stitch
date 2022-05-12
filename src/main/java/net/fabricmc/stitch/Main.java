@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ * Modifications copyright (c) 2022 OrnitheMC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,38 +22,48 @@ import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
 import net.fabricmc.stitch.commands.tinyv2.CommandProposeV2FieldNames;
 import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class Main {
+public class Main
+{
+    public static final MessageDigest MESSAGE_DIGEST;
     private static final Map<String, Command> COMMAND_MAP = new TreeMap<>();
 
-    public static void addCommand(Command command) {
-        COMMAND_MAP.put(command.name.toLowerCase(Locale.ROOT), command);
-    }
-
     static {
+        try {
+            MESSAGE_DIGEST = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
         addCommand(new CommandAsmTrace());
-        addCommand(new CommandGenerateIntermediary());
+        addCommand(new CommandGenerateCalamus());
         addCommand(new CommandGeneratePrefixRemapper());
         addCommand(new CommandMatcherToTiny());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandProposeFieldNames());
         addCommand(new CommandReorderTiny());
-        addCommand(new CommandRewriteIntermediary());
-        addCommand(new CommandUpdateIntermediary());
+        addCommand(new CommandRewriteCalamus());
+        addCommand(new CommandUpdateCalamus());
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
         addCommand(new CommandProposeV2FieldNames());
         addCommand(new CommandValidateRecords());
     }
 
+    public static void addCommand(Command command) {
+        COMMAND_MAP.put(command.name.toLowerCase(Locale.ROOT), command);
+    }
+
     public static void main(String[] args) {
         if (args.length == 0
-                || !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
-                || !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
+              || !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
+              || !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
             if (args.length > 0) {
                 System.out.println("Invalid command: " + args[0]);
             }
