@@ -40,10 +40,7 @@ public class Main
             throw new RuntimeException(e);
         }
 
-        addCommand(new CommandAsmTrace());
         addCommand(new CommandGenerateCalamus());
-        addCommand(new CommandGeneratePrefixRemapper());
-        addCommand(new CommandMatcherToTiny());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandProposeFieldNames());
@@ -53,7 +50,6 @@ public class Main
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
         addCommand(new CommandProposeV2FieldNames());
-        addCommand(new CommandValidateRecords());
     }
 
     public static void addCommand(Command command) {

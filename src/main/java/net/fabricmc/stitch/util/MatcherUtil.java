@@ -21,13 +21,13 @@ import net.fabricmc.mappings.EntryTriple;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.function.BiConsumer;
-import java.util.function.UnaryOperator;
 
 public final class MatcherUtil {
     private MatcherUtil() {
 
     }
 
+    @SuppressWarnings("deprecation")
     public static void read(BufferedReader reader, boolean invert, BiConsumer<String, String> classMappingConsumer, BiConsumer<EntryTriple, EntryTriple> fieldMappingConsumer, BiConsumer<EntryTriple, EntryTriple> methodMappingConsumer) throws IOException {
         String line;
         String ownerFrom = null, ownerTo = null;

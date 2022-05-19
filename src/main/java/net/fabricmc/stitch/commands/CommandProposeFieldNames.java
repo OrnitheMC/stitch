@@ -41,6 +41,7 @@ public class CommandProposeFieldNames extends Command {
         return count == 3;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void run(String[] args) throws Exception {
         Map<EntryTriple, String> fieldNamesO = new FieldNameFinder().findNames(new File(args[0]));
@@ -51,12 +52,12 @@ public class CommandProposeFieldNames extends Command {
         Map<EntryTriple, String> fieldNames = new HashMap<>();
 
         Mappings mappings;
-        try (FileInputStream fileIn = new FileInputStream(new File(args[1]))) {
+        try (FileInputStream fileIn = new FileInputStream(args[1])) {
             mappings = MappingsProvider.readTinyMappings(fileIn, false);
         }
 
-        try (FileInputStream fileIn = new FileInputStream(new File(args[1]));
-             FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
+        try (FileInputStream fileIn = new FileInputStream(args[1]);
+             FileOutputStream fileOut = new FileOutputStream(args[2]);
              InputStreamReader fileInReader = new InputStreamReader(fileIn);
              OutputStreamWriter fileOutWriter = new OutputStreamWriter(fileOut);
              BufferedReader reader = new BufferedReader(fileInReader);

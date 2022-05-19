@@ -28,7 +28,7 @@ public class ClassMerger {
     private static final String ITF_LIST_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterfaces;";
     private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Environment;";
 
-    private abstract class Merger<T> {
+    private abstract static class Merger<T> {
         private final Map<String, T> entriesClient, entriesServer;
         private final List<String> entryNames;
 
@@ -45,7 +45,7 @@ public class ClassMerger {
         public abstract String getName(T entry);
         public abstract void applySide(T entry, String side);
 
-        private final List<String> toMap(List<T> entries, Map<String, T> map) {
+        private List<String> toMap(List<T> entries, Map<String, T> map) {
             List<String> list = new ArrayList<>(entries.size());
             for (T entry : entries) {
                 String name = getName(entry);

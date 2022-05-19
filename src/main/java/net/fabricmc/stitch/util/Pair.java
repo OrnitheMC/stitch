@@ -39,18 +39,17 @@ public final class Pair<K, V> {
         return right;
     }
 
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
     @Override
-    protected Object clone() throws CloneNotSupportedException {
-        //noinspection unchecked
-        return new Pair(left, right);
+    protected Object clone() {
+        return new Pair<>(left, right);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Pair)) {
+        if (!(o instanceof Pair other)) {
             return false;
         } else {
-            Pair other = (Pair) o;
             return Objects.equals(other.left, left) && Objects.equals(other.right, right);
         }
     }

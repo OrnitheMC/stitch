@@ -21,14 +21,8 @@ import net.fabricmc.mappings.Mappings;
 import net.fabricmc.mappings.MappingsProvider;
 import net.fabricmc.stitch.Command;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.util.Comparator;
-import java.util.Locale;
 
 public class CommandReorderTiny extends Command {
     public CommandReorderTiny() {
@@ -45,6 +39,7 @@ public class CommandReorderTiny extends Command {
         return count >= 4;
     }
 
+    @SuppressWarnings("deprecation")
     private int compareTriples(EntryTriple a, EntryTriple b) {
         int c = a.getOwner().compareTo(b.getOwner());
         if (c == 0) {
@@ -56,6 +51,7 @@ public class CommandReorderTiny extends Command {
         return c;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void run(String[] args) throws Exception {
         File fileOld = new File(args[0]);

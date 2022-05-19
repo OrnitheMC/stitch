@@ -27,12 +27,10 @@ import java.util.*;
  * where it could get away with naming them differently.
  */
 public class ClassPropagationTree {
-    private final JarRootEntry jar;
     private final Set<JarClassEntry> relevantClasses;
     private final Set<JarClassEntry> topmostClasses;
 
     public ClassPropagationTree(JarRootEntry jar, JarClassEntry baseClass) {
-        this.jar = jar;
         relevantClasses = StitchUtil.newIdentityHashSet();
         topmostClasses = StitchUtil.newIdentityHashSet();
 

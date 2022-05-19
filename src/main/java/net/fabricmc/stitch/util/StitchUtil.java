@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystems;
@@ -121,9 +120,5 @@ public final class StitchUtil {
         }
 
         return out;
-    }
-
-    public static long getTime() {
-        return new Date().getTime();
     }
 }

@@ -162,7 +162,7 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     public boolean isAnonymous() {
-        return getName().matches("[0-9]+");
+        return getName().matches("\\d+");
     }
 
     @Override

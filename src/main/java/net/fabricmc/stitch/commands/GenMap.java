@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@SuppressWarnings("deprecation")
 public class GenMap {
     private static class Class {
         private final String name;

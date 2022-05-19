@@ -7,16 +7,20 @@ plugins {
 sourceCompatibility = JavaVersion.VERSION_17
 
 def ENV = System.getenv()
-version = "0.6.2-ornithe" + (ENV.GITHUB_ACTIONS ? "" : "+local")
+version = "0.7.0" + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
-group = 'net.fabricmc'
+group = 'net.ornithemc'
 archivesBaseName = project.name.toLowerCase()
 
 repositories {
 	mavenCentral()
 	maven {
-		name = 'Fabric'
-		url = 'https://maven.fabricmc.net/'
+		name "Quilt"
+		url "https://maven.quiltmc.org/repository/release"
+	}
+	maven {
+		name "Ornithe"
+		url "https://maven.ornithemc.net/releases"
 	}
 }
 
@@ -33,11 +37,11 @@ dependencies {
 	ship 'org.ow2.asm:asm-commons:9.3'
 	ship 'org.ow2.asm:asm-tree:9.3'
 	ship 'org.ow2.asm:asm-util:9.3'
-	ship 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
+	ship 'net.ornithemc:tiny-mappings-parser:0.3.0'
 	implementation 'com.google.guava:guava:31.1-jre'
 	compileOnly 'org.jetbrains:annotations:23.0.0'
 
-	enigma 'cuchaz:enigma:0.23.2'
+	enigma "net.ornithemc:enigma:1.2.2"
 
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'

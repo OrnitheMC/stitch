@@ -64,6 +64,7 @@ public class CommandRewriteCalamus extends Command {
 
         File outFile = new File(args[2]);
         if (outFile.exists()) {
+            //noinspection ResultOfMethodCallIgnored
             outFile.delete();
         }
 

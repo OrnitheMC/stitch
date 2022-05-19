@@ -19,7 +19,6 @@ package net.fabricmc.stitch.representation;
 
 import net.fabricmc.stitch.Main;
 import org.apache.commons.lang3.ArrayUtils;
-import org.objectweb.asm.commons.Remapper;
 
 import java.nio.ByteBuffer;
 
@@ -56,12 +55,5 @@ public class JarFieldEntry extends AbstractJarEntry
     @Override
     public byte[] getHash() {
         return saltedFieldHash;
-    }
-
-    public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {
-        String pastDesc = desc;
-
-        name = remapper.mapFieldName(oldOwner, name, pastDesc);
-        desc = remapper.mapDesc(pastDesc);
     }
 }

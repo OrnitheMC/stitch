@@ -30,7 +30,7 @@ import org.objectweb.asm.Opcodes;
  * parameter annotations.
  */
 public class SyntheticParameterClassVisitor extends ClassVisitor {
-    private class SyntheticMethodVisitor extends MethodVisitor {
+    private static class SyntheticMethodVisitor extends MethodVisitor {
         private final int offset;
 
         SyntheticMethodVisitor(int api, int offset, MethodVisitor methodVisitor) {

@@ -34,32 +34,29 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+@SuppressWarnings("deprecation")
 public class StitchNameProposalService {
 	private Map<EntryTriple, String> fieldNames;
 
 	private StitchNameProposalService(EnigmaPluginContext ctx) {
-		ctx.registerService("stitch:jar_indexer", JarIndexerService.TYPE, ctx1 -> new JarIndexerService() {
-			@Override
-			public void acceptJar(Set<String> classNames, ClassProvider classProvider, JarIndex jarIndex) {
+		ctx.registerService("stitch:jar_indexer", JarIndexerService.TYPE, ctx1 -> (classNames, classProvider, jarIndex) -> {
 
-				Map<String, Set<String>> enumFields = new HashMap<>();
-				Map<String, List<MethodNode>> methods = new HashMap<>();
+			Map<String, Set<String>> enumFields = new HashMap<>();
+			Map<String, List<MethodNode>> methods = new HashMap<>();
 
-				for (String className : classNames) {
-					classProvider.get(className).accept(new NameFinderVisitor(StitchUtil.ASM_VERSION, enumFields, methods));
-				}
+			for (String className : classNames) {
+				classProvider.get(className).accept(new NameFinderVisitor(StitchUtil.ASM_VERSION, enumFields, methods));
+			}
 
-				try {
-					fieldNames = new FieldNameFinder().findNames(enumFields, methods);
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
+			try {
+				fieldNames = new FieldNameFinder().findNames(enumFields, methods);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
 			}
 		});
 
 		ctx.registerService("stitch:name_proposal", NameProposalService.TYPE, ctx12 -> (obfEntry, remapper) -> {
-			if(obfEntry instanceof FieldEntry){
-				FieldEntry fieldEntry = (FieldEntry) obfEntry;
+			if(obfEntry instanceof FieldEntry fieldEntry){
 				EntryTriple key = new EntryTriple(fieldEntry.getContainingClass().getFullName(), fieldEntry.getName(), fieldEntry.getDesc().toString());
 				return Optional.ofNullable(fieldNames.get(key));
 			}

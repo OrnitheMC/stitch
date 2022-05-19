@@ -58,12 +58,14 @@ public class CommandProposeV2FieldNames extends Command {
 		return count == 4;
 	}
 
+	@SuppressWarnings("deprecation")
 	private Map<EntryTriple, TinyField> generatedNamesOfClass(TinyClass tinyClass) {
 		return tinyClass.getFields().stream().collect(Collectors.toMap(
 						(TinyField field) -> new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0), field.getFieldDescriptorInFirstNamespace())
 						, field -> field));
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void run(String[] args) throws Exception {
 		File inputJar = new File(args[0]);
@@ -83,7 +85,7 @@ public class CommandProposeV2FieldNames extends Command {
 
 		TinyFile tinyFile = TinyV2Reader.read(Paths.get(args[1]));
 		Map<EntryTriple, TinyField> fieldsMap = new HashMap<>();
-		tinyFile.getClassEntries().stream().map(this::generatedNamesOfClass).forEach(map -> map.forEach(fieldsMap::put));
+		tinyFile.getClassEntries().stream().map(this::generatedNamesOfClass).forEach(fieldsMap::putAll);
 		Map<String, TinyClass> classMap = tinyFile.mapClassesByFirstNamespace();
 
 		int replaceCount = 0;

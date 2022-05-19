@@ -24,7 +24,7 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -32,20 +32,9 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class JarMerger implements AutoCloseable {
-    public class Entry {
-        public final Path path;
-        public final BasicFileAttributes metadata;
-        public final byte[] data;
-
-        public Entry(Path path, BasicFileAttributes metadata, byte[] data) {
-            this.path = path;
-            this.metadata = metadata;
-            this.data = data;
-        }
-    }
+    public record Entry(Path path, BasicFileAttributes metadata, byte[] data) { }
 
     private static final ClassMerger CLASS_MERGER = new ClassMerger();
     private final StitchUtil.FileSystemDelegate inputClientFs, inputServerFs, outputFs;
@@ -86,9 +75,10 @@ public class JarMerger implements AutoCloseable {
         outputFs.close();
     }
 
-    private void readToMap(Map<String, Entry> map, Path input, boolean isServer) {
+    private void readToMap(Map<String, Entry> map, Path input) {
         try {
-            Files.walkFileTree(input, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(input, new SimpleFileVisitor<>()
+            {
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attr) throws IOException {
                     if (attr.isDirectory()) {
@@ -98,7 +88,7 @@ public class JarMerger implements AutoCloseable {
                     if (!path.getFileName().toString().endsWith(".class")) {
                         if (path.toString().equals("/META-INF/MANIFEST.MF")) {
                             map.put("META-INF/MANIFEST.MF", new Entry(path, attr,
-                                    "Manifest-Version: 1.0\nMain-Class: net.minecraft.client.Main\n".getBytes(Charset.forName("UTF-8"))));
+                                  "Manifest-Version: 1.0\nMain-Class: net.minecraft.client.Main\n".getBytes(StandardCharsets.UTF_8)));
                         } else {
                             if (path.toString().startsWith("/META-INF/")) {
                                 if (path.toString().endsWith(".SF") || path.toString().endsWith(".RSA")) {
@@ -108,7 +98,7 @@ public class JarMerger implements AutoCloseable {
 
                             map.put(path.toString().substring(1), new Entry(path, attr, null));
                         }
-                        
+
                         return FileVisitResult.CONTINUE;
                     }
 
@@ -144,10 +134,11 @@ public class JarMerger implements AutoCloseable {
 
     public void merge() throws IOException {
         ExecutorService service = Executors.newFixedThreadPool(2);
-        service.submit(() -> readToMap(entriesClient, inputClient, false));
-        service.submit(() -> readToMap(entriesServer, inputServer, true));
+        service.submit(() -> readToMap(entriesClient, inputClient));
+        service.submit(() -> readToMap(entriesServer, inputServer));
         service.shutdown();
         try {
+            //noinspection ResultOfMethodCallIgnored
             service.awaitTermination(1, TimeUnit.HOURS);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -217,7 +208,7 @@ public class JarMerger implements AutoCloseable {
             } else {
                 return null;
             }
-        }).filter(Objects::nonNull).collect(Collectors.toList());
+        }).filter(Objects::nonNull).toList();
 
         for (Entry e : entries) {
             add(e);

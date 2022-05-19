@@ -20,7 +20,6 @@ package net.fabricmc.stitch.representation;
 import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.apache.commons.lang3.ArrayUtils;
-import org.objectweb.asm.commons.Remapper;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -130,12 +129,5 @@ public class JarMethodEntry extends AbstractJarEntry
         for (JarClassEntry cc : c.getImplementers(storage)) {
             getMatchingEntries(entries, storage, cc, indent + 1);
         }
-    }
-
-    public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {
-        String pastDesc = desc;
-
-        name = remapper.mapMethodName(oldOwner, name, pastDesc);
-        desc = remapper.mapMethodDesc(pastDesc);
     }
 }
