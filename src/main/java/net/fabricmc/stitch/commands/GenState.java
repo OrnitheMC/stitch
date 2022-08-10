@@ -32,7 +32,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-class GenState
+public class GenState
 {
     private final Map<AbstractJarEntry, String> values = new IdentityHashMap<>();
     private final Scanner scanner = new Scanner(System.in);

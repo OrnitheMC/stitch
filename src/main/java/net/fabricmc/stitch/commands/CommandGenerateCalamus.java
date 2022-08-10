@@ -19,6 +19,7 @@ package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.*;
+import net.fabricmc.stitch.util.CalamusUtil;
 
 import java.io.*;
 import java.util.Locale;
@@ -41,35 +42,6 @@ public class CommandGenerateCalamus extends Command {
     @Override
     public void run(String[] args) throws Exception {
         File file = new File(args[0]);
-        JarRootEntry jarEntry = new JarRootEntry(file);
-        try {
-            JarReader reader = new JarReader(jarEntry);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        GenState state = new GenState();
-        boolean clearedPatterns = false;
-
-        for (int i = 2; i < args.length; i++) {
-            switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "-t", "--target-namespace" -> {
-                    state.setTargetNamespace(args[i + 1]);
-                    i++;
-                }
-                case "-p", "--obfuscation-pattern" -> {
-                    if (!clearedPatterns)
-                        state.clearObfuscatedPatterns();
-                    clearedPatterns = true;
-                    state.addObfuscatedPattern(args[i + 1]);
-                    i++;
-                }
-            }
-        }
-
-        System.err.println("Generating new mappings...");
-        state.generate(new File(args[1]), jarEntry, null);
-        System.err.println("Done!");
+        CalamusUtil.generateCalamus(file, args);
     }
 }
