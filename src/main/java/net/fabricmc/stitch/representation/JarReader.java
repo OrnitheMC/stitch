@@ -98,8 +98,8 @@ public class JarReader
 
                         @Override
                         public void visitEnd() {
-                            long timeSpan = System.nanoTime() - startedAt;
-                            System.err.println("Loaded " + this.classEntry.getName() + " in " + timeSpan + "ns");
+                            long timeSpan = (System.nanoTime() - startedAt) / 1000;
+                            System.err.println("Loaded " + this.classEntry.getName() + " in " + timeSpan + "μs");
                         }
                     };
                     reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);

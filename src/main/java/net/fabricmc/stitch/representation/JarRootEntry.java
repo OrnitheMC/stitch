@@ -17,12 +17,16 @@
 
 package net.fabricmc.stitch.representation;
 
+import com.google.common.io.ByteStreams;
 import net.fabricmc.stitch.Main;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class JarRootEntry extends AbstractJarEntry
 {
@@ -38,7 +42,25 @@ public class JarRootEntry extends AbstractJarEntry
         this.file = file;
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
         this.allClasses = new ArrayList<>();
-        this.jarHash = Main.MESSAGE_DIGEST.digest(Files.readAllBytes(file.toPath()));
+
+        long startedAt = System.nanoTime();
+        try (var jarFile = new JarFile(file)) {
+            Enumeration<JarEntry> entries = jarFile.entries();
+            JarEntry entry;
+
+            while (entries.hasMoreElements()) {
+                entry = entries.nextElement();
+                if (entry.getName().endsWith(".class")) {
+                    try (InputStream inputStream = jarFile.getInputStream(entry)) {
+                        Main.MESSAGE_DIGEST.update(ByteStreams.toByteArray(inputStream));
+                    }
+                }
+            }
+        }
+        long timeSpan = (System.nanoTime() - startedAt) / 1000;
+        System.err.println("Digested all classes within " + this.name + " in " + timeSpan + "μs");
+
+        this.jarHash = Main.MESSAGE_DIGEST.digest();
     }
 
     public JarClassEntry getClass(String name, JarClassEntry.ClassEntryPopulator populator, boolean create) {
