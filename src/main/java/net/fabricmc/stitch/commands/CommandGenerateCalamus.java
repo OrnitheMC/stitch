@@ -41,7 +41,8 @@ public class CommandGenerateCalamus extends Command {
 
     @Override
     public void run(String[] args) throws Exception {
-        File file = new File(args[0]);
-        CalamusUtil.generateCalamus(file, args);
+        File jarFile = new File(args[0]);
+        File calamusFile = new File(args[1]);
+        CalamusUtil.generateCalamus(jarFile, calamusFile, args);
     }
 }
