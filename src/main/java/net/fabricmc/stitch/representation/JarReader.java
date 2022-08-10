@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.jar.JarInputStream;
@@ -109,11 +110,48 @@ public class JarReader
 
         System.err.println("Read " + this.jar.getAllClasses().size() + " (" + this.jar.getClasses().size() + ") classes.");
 
-        // Stage 2: find subclasses
+        // stage 2: find nested classes
+        Set<JarClassEntry> candidates = StitchUtil.newIdentityHashSet();
+        candidates.addAll(this.jar.getAllClasses());
+
+        int pass = 0;
+        int maxPasses = 100; // just in case...
+
+        while (!candidates.isEmpty()) {
+            Iterator<JarClassEntry> it = candidates.iterator();
+
+            while (it.hasNext()) {
+                JarClassEntry c = it.next();
+                String name = c.getFullyQualifiedName();
+                int i = name.lastIndexOf('$');
+
+                if (i > 0) {
+                    String enclName = name.substring(0, i);
+                    String simpleName = name.substring(i + 1);
+
+                    JarClassEntry ec = this.jar.getClass(enclName, null, false);
+
+                    if (ec != null) {
+                        ec.innerClasses.put(simpleName, c);
+                        it.remove();
+                    } else if (pass == maxPasses) {
+                        System.err.println("cannot find enclosing class " + enclName + " of class " + name);
+                    }
+                } else {
+                    it.remove();
+                }
+            }
+
+            if (pass++ > maxPasses) {
+                break;
+            }
+        }
+
+        // Stage 3: find subclasses
         this.jar.getAllClasses().forEach((c) -> c.populateParents(jar));
         System.err.println("Populated subclass entries.");
 
-        // Stage 3: join identical MethodEntries
+        // Stage 4: join identical MethodEntries
         System.err.println("Joining MethodEntries...");
         Set<JarClassEntry> traversedClasses = StitchUtil.newIdentityHashSet();
 

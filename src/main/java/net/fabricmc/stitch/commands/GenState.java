@@ -336,14 +336,76 @@ public class GenState
                 if (s.contains("m_")) {
                     return s;
                 } else {
-                    String newName = next(m, "m");
+                    String newName = nextMethodName(storageNew, c, m);
                     System.out.println(s + " is now " + newName);
                     return newName;
                 }
             }
         }
 
-        return next(m, "m");
+        return nextMethodName(storageNew, c, m);
+    }
+
+    private String nextMethodName(JarRootEntry storage, JarClassEntry c, JarMethodEntry m) {
+        String name = next(m, "m");
+
+        if (m.isSource(storage, c)) {
+            String suf = name.substring(2);
+            String key = m.getName() + m.getDescriptor();
+            Set<JarMethodEntry> equivMethods = StitchUtil.newIdentityHashSet();
+
+            findEquivalentMethods(storage, c, key, equivMethods);
+
+            for (JarMethodEntry em : equivMethods) {
+                if (em != m) {
+                    values.put(em, suf);
+                }
+            }
+        }
+
+        return name;
+    }
+
+    private void findEquivalentMethods(JarRootEntry storage, JarClassEntry c, String key, Set<JarMethodEntry> methods) {
+        findSourceMethod(storage, c, key, methods);
+
+        for (JarClassEntry cs : c.getSubclasses(storage)) {
+            findEquivalentMethods(storage, cs, key, methods);
+        }
+        for (JarClassEntry ci : c.getImplementers(storage)) {
+            findEquivalentMethods(storage, ci, key, methods);
+        }
+    }
+
+    private boolean findSourceMethod(JarRootEntry storage, JarClassEntry c, String key, Set<JarMethodEntry> methods) {
+        JarMethodEntry m = c.getMethod(key);
+
+        boolean hasMethod = false;
+        boolean parentsAdded = false;
+
+        if (m != null) {
+            if (Access.isPrivateOrStatic(m.getAccess())) {
+                return false;
+            }
+
+            hasMethod = true;
+        }
+
+        JarClassEntry sc = c.getSuperClass(storage);
+
+        if (sc != null) {
+            parentsAdded = findSourceMethod(storage, sc, key, methods) | parentsAdded;
+        }
+
+        for (JarClassEntry ic : c.getInterfaces(storage)) {
+            parentsAdded = findSourceMethod(storage, ic, key, methods) | parentsAdded;
+        }
+
+        if (!parentsAdded && hasMethod) {
+            methods.add(m);
+        }
+
+        return parentsAdded || hasMethod;
     }
 
     private void addClass(BufferedWriter writer, JarClassEntry c, JarRootEntry storageOld, JarRootEntry storage, String translatedPrefix) throws IOException {

@@ -68,33 +68,30 @@ public class JarRootEntry extends AbstractJarEntry
             return null;
         }
 
-        String[] nameSplit = name.split("\\$");
-        int i = 0;
+        JarClassEntry entry = null;
 
-        JarClassEntry parent;
-        JarClassEntry entry = classTree.get(nameSplit[i++]);
-        if (entry == null && create) {
-            entry = new JarClassEntry(nameSplit[0], nameSplit[0], populator, this);
-            synchronized (syncObject) {
-                allClasses.add(entry);
-                classTree.put(entry.getName(), entry);
+        int i = name.lastIndexOf('$');
+        String simpleName = (i > 0) ? name.substring(i + 1) : name;
+
+        if (i > 0) {
+            String enclName = name.substring(0, i);
+            JarClassEntry ec = getClass(enclName, null, false);
+
+            if (ec != null) {
+                entry = ec.getInnerClass(simpleName);
             }
+        } else {
+            entry = classTree.get(name);
         }
 
-        StringBuilder fullyQualifiedBuilder = new StringBuilder(nameSplit[0]);
+        if (entry == null && create) {
+            entry = new JarClassEntry(simpleName, name, populator, this);
 
-        while (i < nameSplit.length && entry != null) {
-            fullyQualifiedBuilder.append('$');
-            fullyQualifiedBuilder.append(nameSplit[i]);
+            synchronized (syncObject) {
+                allClasses.add(entry);
 
-            parent = entry;
-            entry = entry.getInnerClass(nameSplit[i++]);
-
-            if (entry == null && create) {
-                entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString(), populator, this);
-                synchronized (syncObject) {
-                    allClasses.add(entry);
-                    parent.innerClasses.put(entry.getName(), entry);
+                if (i < 0) {
+                    classTree.put(name, entry);
                 }
             }
         }
