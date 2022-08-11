@@ -347,26 +347,32 @@ public class GenState
     }
 
     private String nextMethodName(JarRootEntry storage, JarClassEntry c, JarMethodEntry m) {
-        String name = next(m, "m");
+        String key = m.getName() + m.getDescriptor();
+        Set<JarMethodEntry> ms = new TreeSet<>((m1, m2) -> {
+            return m1.getParentName().compareTo(m2.getParentName());
+        });
 
-        if (m.isSource(storage, c)) {
-            String suf = name.substring(2);
-            String key = m.getName() + m.getDescriptor();
-            Set<JarMethodEntry> equivMethods = StitchUtil.newIdentityHashSet();
+        findSourceMethod(storage, c, key, ms);
 
-            findEquivalentMethods(storage, c, key, equivMethods);
+        if (ms.isEmpty()) {
+            // method is most likely private or static
+            return next(m, "m");
+        }
 
-            for (JarMethodEntry em : equivMethods) {
-                if (em != m) {
-                    values.put(em, suf);
-                }
-            }
+        Iterator<JarMethodEntry> it = ms.iterator();
+        JarMethodEntry pm = it.next();
+
+        String name = next(pm, "m");
+        String suf = name.substring(2);
+
+        while (it.hasNext()) {
+            values.put(it.next(), suf);
         }
 
         return name;
     }
 
-    private void findEquivalentMethods(JarRootEntry storage, JarClassEntry c, String key, Set<JarMethodEntry> methods) {
+    private void findEquivalentMethods(JarRootEntry storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods) {
         findSourceMethod(storage, c, key, methods);
 
         for (JarClassEntry cs : c.getSubclasses(storage)) {
@@ -377,7 +383,7 @@ public class GenState
         }
     }
 
-    private boolean findSourceMethod(JarRootEntry storage, JarClassEntry c, String key, Set<JarMethodEntry> methods) {
+    private boolean findSourceMethod(JarRootEntry storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods) {
         JarMethodEntry m = c.getMethod(key);
 
         boolean hasMethod = false;
@@ -386,6 +392,9 @@ public class GenState
         if (m != null) {
             if (Access.isPrivateOrStatic(m.getAccess())) {
                 return false;
+            }
+            if (methods.contains(m)) {
+                return true;
             }
 
             hasMethod = true;
@@ -402,7 +411,9 @@ public class GenState
         }
 
         if (!parentsAdded && hasMethod) {
-            methods.add(m);
+            if (methods.add(m)) {
+                findEquivalentMethods(storage, c, key, methods);
+            }
         }
 
         return parentsAdded || hasMethod;

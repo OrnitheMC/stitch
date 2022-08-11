@@ -38,7 +38,7 @@ public class JarClassEntry extends AbstractJarEntry
     List<String> implementers;
 
     protected JarClassEntry(String name, String fullyQualifiedName, ClassEntryPopulator populator, JarRootEntry parentJar) {
-        super(name);
+        super(name, "");
 
         this.fullyQualifiedName = fullyQualifiedName;
         this.innerClasses = new TreeMap<>(Comparator.naturalOrder());

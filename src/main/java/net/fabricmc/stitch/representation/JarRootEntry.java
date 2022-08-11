@@ -35,7 +35,7 @@ public class JarRootEntry extends AbstractJarEntry
     final byte[] jarHash;
 
     public JarRootEntry(File file) throws IOException {
-        super(file.getName());
+        super(file.getName(), "");
 
         this.file = file;
         this.classTree = new TreeMap<>(Comparator.naturalOrder());

@@ -29,7 +29,7 @@ public class JarFieldEntry extends AbstractJarEntry
     protected String signature;
 
     JarFieldEntry(int access, String name, String desc, String signature, JarClassEntry parentClass) {
-        super(name);
+        super(name, parentClass.fullyQualifiedName);
         this.setAccess(access);
         this.desc = desc;
         this.signature = signature;

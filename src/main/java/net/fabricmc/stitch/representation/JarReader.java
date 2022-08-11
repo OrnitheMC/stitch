@@ -152,52 +152,6 @@ public class JarReader
         this.jar.getAllClasses().forEach((c) -> c.populateParents(jar));
         System.err.println("Populated subclass entries.");
 
-        // Stage 4: join identical MethodEntries
-        System.err.println("Joining MethodEntries...");
-        Set<JarClassEntry> traversedClasses = StitchUtil.newIdentityHashSet();
-
-        int joinedMethods = 1;
-        int uniqueMethods = 0;
-
-        Collection<JarMethodEntry> checkedMethods = StitchUtil.newIdentityHashSet();
-
-        for (JarClassEntry entry : jar.getAllClasses()) {
-            if (traversedClasses.contains(entry)) {
-                continue;
-            }
-
-            ClassPropagationTree tree = new ClassPropagationTree(jar, entry);
-            if (tree.getClasses().size() == 1) {
-                traversedClasses.add(entry);
-                continue;
-            }
-
-            for (JarClassEntry c : tree.getClasses()) {
-                for (JarMethodEntry m : c.getMethods()) {
-                    if (!checkedMethods.add(m)) {
-                        continue;
-                    }
-
-                    // get all matching entries
-                    List<JarClassEntry> mList = m.getMatchingEntries(jar, c);
-
-                    if (mList.size() > 1) {
-                        for (JarClassEntry key : mList) {
-                            JarMethodEntry value = key.getMethod(m.getKey());
-                            if (value != m) {
-                                key.methods.put(m.getKey(), m);
-                                joinedMethods++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            traversedClasses.addAll(tree.getClasses());
-        }
-
-        System.err.println("Joined " + joinedMethods + " MethodEntries (" + uniqueMethods + " unique, " + traversedClasses.size() + " classes).");
-
         System.err.println("- Done. -");
     }
 }

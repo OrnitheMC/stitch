@@ -20,10 +20,12 @@ package net.fabricmc.stitch.representation;
 public abstract class AbstractJarEntry
 {
     protected String name;
+    protected String parentName;
     protected int access;
 
-    public AbstractJarEntry(String name) {
+    public AbstractJarEntry(String name, String parentName) {
         this.name = name;
+        this.parentName = parentName;
     }
 
     public int getAccess() {
@@ -38,6 +40,10 @@ public abstract class AbstractJarEntry
         return name;
     }
 
+    public String getParentName() {
+        return parentName;
+    }
+
     protected String getKey() {
         return name;
     }
@@ -46,12 +52,12 @@ public abstract class AbstractJarEntry
 
     @Override
     public boolean equals(Object other) {
-        return other != null && other.getClass() == getClass() && ((AbstractJarEntry) other).getKey().equals(getKey());
+        return other != null && other.getClass() == getClass() && ((AbstractJarEntry) other).parentName.equals(parentName) && ((AbstractJarEntry) other).getKey().equals(getKey());
     }
 
     @Override
     public int hashCode() {
-        return getKey().hashCode();
+        return (parentName + getKey()).hashCode();
     }
 
     @Override
