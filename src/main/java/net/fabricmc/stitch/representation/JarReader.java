@@ -68,6 +68,7 @@ public class JarReader
                         public void visit(final int version, final int access, final String name, final String signature,
                                           final String superName, final String[] interfaces) {
                             startedAt = System.nanoTime();
+
                             byte[] bytes;
                             if (finalEntry.getSize() < reader.b.length) {
                                 bytes = Arrays.copyOf(reader.b, (int) finalEntry.getSize());

@@ -38,15 +38,13 @@ dependencies {
 	ship 'org.ow2.asm:asm-tree:9.3'
 	ship 'org.ow2.asm:asm-util:9.3'
 	ship 'net.ornithemc:tiny-mappings-parser:0.3.0'
-	implementation 'com.google.guava:guava:31.1-jre'
+	ship 'com.google.guava:guava:31.1-jre'
 	compileOnly 'org.jetbrains:annotations:23.0.0'
 
 	enigma "net.ornithemc:enigma:1.2.2"
 
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
-
-	implementation 'org.apache.commons:commons-lang3:3.12.0'
 }
 
 jar {
@@ -69,6 +67,7 @@ task allJar(type: Jar) {
 				'Main-Class': "net.fabricmc.stitch.Main"
 	}
 	archiveClassifier = 'all'
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
 	with jar
 }
 

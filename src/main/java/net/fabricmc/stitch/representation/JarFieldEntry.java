@@ -18,9 +18,9 @@
 package net.fabricmc.stitch.representation;
 
 import net.fabricmc.stitch.Main;
-import org.apache.commons.lang3.ArrayUtils;
 
-import java.nio.ByteBuffer;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 
 public class JarFieldEntry extends AbstractJarEntry
 {
@@ -35,8 +35,9 @@ public class JarFieldEntry extends AbstractJarEntry
         this.signature = signature;
 
         Main.MESSAGE_DIGEST.update(parentClass.getHash());
-        byte[] bytes = ArrayUtils.addAll(ByteBuffer.allocate(4).putInt(getAccess()).array(), getKey().getBytes());
-        this.saltedFieldHash = Main.MESSAGE_DIGEST.digest(bytes);
+        Main.MESSAGE_DIGEST.update(BigInteger.valueOf(access).toByteArray());
+        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
+        this.saltedFieldHash = Main.MESSAGE_DIGEST.digest();
     }
 
     public String getDescriptor() {

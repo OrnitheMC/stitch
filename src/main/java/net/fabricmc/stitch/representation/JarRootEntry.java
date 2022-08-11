@@ -23,14 +23,12 @@ import net.fabricmc.stitch.Main;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class JarRootEntry extends AbstractJarEntry
 {
-    final Object syncObject = new Object();
     final File file;
     final Map<String, JarClassEntry> classTree;
     final List<JarClassEntry> allClasses;
@@ -87,12 +85,10 @@ public class JarRootEntry extends AbstractJarEntry
         if (entry == null && create) {
             entry = new JarClassEntry(simpleName, name, populator, this);
 
-            synchronized (syncObject) {
-                allClasses.add(entry);
+            allClasses.add(entry);
 
-                if (i < 0) {
-                    classTree.put(name, entry);
-                }
+            if (i < 0) {
+                classTree.put(name, entry);
             }
         }
 
