@@ -18,15 +18,11 @@
 package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.JarReader;
-import net.fabricmc.stitch.representation.JarRootEntry;
+import net.fabricmc.stitch.util.CalamusUtil;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Locale;
 
-public class CommandUpdateCalamus extends Command
-{
+public class CommandUpdateCalamus extends Command {
     public CommandUpdateCalamus() {
         super("updateCalamus");
     }
@@ -43,49 +39,11 @@ public class CommandUpdateCalamus extends Command
 
     @Override
     public void run(String[] args) throws Exception {
-        File fileOld = new File(args[0]);
-        JarRootEntry jarOld = new JarRootEntry(fileOld);
-        try {
-            JarReader reader = new JarReader(jarOld);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        File fileNew = new File(args[1]);
-        JarRootEntry jarNew = new JarRootEntry(fileNew);
-        try {
-            JarReader reader = new JarReader(jarNew);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        GenState state = new GenState();
-        boolean clearedPatterns = false;
-
-        for (int i = 5; i < args.length; i++) {
-            switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "-t", "--target-namespace" -> {
-                    state.setTargetNamespace(args[i + 1]);
-                    i++;
-                }
-                case "-p", "--obfuscation-pattern" -> {
-                    if (!clearedPatterns)
-                        state.clearObfuscatedPatterns();
-                    clearedPatterns = true;
-                    state.addObfuscatedPattern(args[i + 1]);
-                    i++;
-                }
-            }
-        }
-
-        System.err.println("Loading remapping files...");
-        state.prepareUpdate(new File(args[2]), new File(args[4]));
-
-        System.err.println("Generating new mappings...");
-        state.generate(new File(args[3]), jarNew, jarOld);
-        System.err.println("Done!");
+        File oldJarFile = new File(args[0]);
+        File newJarFile = new File(args[1]);
+        File oldCalamusFile = new File(args[2]);
+        File newCalamusFile = new File(args[3]);
+        File matchesFile = new File(args[4]);
+        CalamusUtil.updateCalamus(oldJarFile, newJarFile, oldCalamusFile, newCalamusFile, matchesFile, args);
     }
-
 }

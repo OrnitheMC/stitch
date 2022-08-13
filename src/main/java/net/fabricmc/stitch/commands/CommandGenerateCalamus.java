@@ -18,11 +18,9 @@
 package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.*;
 import net.fabricmc.stitch.util.CalamusUtil;
 
 import java.io.*;
-import java.util.Locale;
 
 public class CommandGenerateCalamus extends Command {
     public CommandGenerateCalamus() {
