@@ -104,7 +104,7 @@ public class CommandProposeFieldNames extends Command {
                     if (tabSplit[0].equals("FIELD")) {
                         EntryTriple key = new EntryTriple(tabSplit[1], tabSplit[3], tabSplit[2]);
                         String value = tabSplit[headerPos + 2];
-                        if (value.startsWith("field_") && fieldNames.containsKey(key)) {
+                        if (value.startsWith("f_") && fieldNames.containsKey(key)) {
                             tabSplit[headerPos + 2] = fieldNames.get(key);
 
                             StringBuilder builder = new StringBuilder(tabSplit[0]);
