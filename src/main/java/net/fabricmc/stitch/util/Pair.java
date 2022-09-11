@@ -18,7 +18,8 @@ package net.fabricmc.stitch.util;
 
 import java.util.Objects;
 
-public final class Pair<K, V> {
+public final class Pair<K, V>
+{
     private final K left;
     private final V right;
 
@@ -47,9 +48,10 @@ public final class Pair<K, V> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Pair other)) {
+        if (!(o instanceof Pair)) {
             return false;
         } else {
+            Pair<?, ?> other = (Pair<?, ?>) o;
             return Objects.equals(other.left, left) && Objects.equals(other.right, right);
         }
     }

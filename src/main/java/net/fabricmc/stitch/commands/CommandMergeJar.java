@@ -24,7 +24,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Locale;
 
-public class CommandMergeJar extends Command {
+public class CommandMergeJar extends Command
+{
     public CommandMergeJar() {
         super("mergeJar");
     }
@@ -49,8 +50,12 @@ public class CommandMergeJar extends Command {
         for (int i = 3; i < args.length; i++) {
             if (args[i].startsWith("--")) {
                 switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
-                    case "removesnowman" -> removeSnowman = true;
-                    case "syntheticparams" -> syntheticParams = true;
+                    case "removesnowman":
+                        removeSnowman = true;
+                        break;
+                    case "syntheticparams":
+                        syntheticParams = true;
+                        break;
                 }
             }
         }

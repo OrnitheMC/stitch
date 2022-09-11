@@ -68,7 +68,7 @@ public class CommandMergeTiny extends Command
 
             String[] path = officialPath.toString().split("\\$");
             a = inputA.root;
-	        TinyEntry b = inputB.root;
+            TinyEntry b = inputB.root;
 
             StringBuilder targetName = new StringBuilder();
 
@@ -207,14 +207,14 @@ public class CommandMergeTiny extends Command
             sharedIndexName = inputA.indexList[0];
 
             // Set<String> matchedIndexes = Sets.intersection(inputA.indexMap.keySet(), inputB.indexMap.keySet());
-	        List<String> totalIndexList = new ArrayList<>(Arrays.asList(inputA.indexList));
+            List<String> totalIndexList = new ArrayList<>(Arrays.asList(inputA.indexList));
             for (String s : inputB.indexList) {
                 if (!totalIndexList.contains(s)) {
                     totalIndexList.add(s);
                 }
             }
 
-	        // emit header
+            // emit header
             StringBuilder header = new StringBuilder();
             header.append("v1");
             for (String s : totalIndexList) {
@@ -395,8 +395,13 @@ public class CommandMergeTiny extends Command
                     }
 
                     switch (type) {
-                        case CLASS -> parent.addChild(entry, "");
-                        case FIELD, METHOD -> parent.addChild(entry, parts[2]);
+                        case CLASS:
+                            parent.addChild(entry, "");
+                            break;
+                        case FIELD:
+                        case METHOD:
+                            parent.addChild(entry, parts[2]);
+                            break;
                     }
                 }
             }

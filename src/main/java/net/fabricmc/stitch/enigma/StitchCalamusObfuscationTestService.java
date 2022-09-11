@@ -24,38 +24,39 @@ import cuchaz.enigma.translation.representation.entry.Entry;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import cuchaz.enigma.translation.representation.entry.MethodEntry;
 
-public class StitchCalamusObfuscationTestService implements ObfuscationTestService {
-	private final String classPrefix;
-	private final String classPackagePrefix;
-	private final String fieldPrefix;
-	private final String methodPrefix;
+public class StitchCalamusObfuscationTestService implements ObfuscationTestService
+{
+    private final String classPrefix;
+    private final String classPackagePrefix;
+    private final String fieldPrefix;
+    private final String methodPrefix;
 
-	public StitchCalamusObfuscationTestService(EnigmaServiceContext<ObfuscationTestService> context) {
-		String prefix = context.getArgument("package").orElse("net/minecraft") + "/";
-		this.classPrefix = context.getArgument("classPrefix").orElse("class_");
-		this.fieldPrefix = context.getArgument("fieldPrefix").orElse("field_");
-		this.methodPrefix = context.getArgument("methodPrefix").orElse("method_");
+    public StitchCalamusObfuscationTestService(EnigmaServiceContext<ObfuscationTestService> context) {
+        String prefix = context.getArgument("package").orElse("net/minecraft") + "/";
+        this.classPrefix = context.getArgument("classPrefix").orElse("class_");
+        this.fieldPrefix = context.getArgument("fieldPrefix").orElse("field_");
+        this.methodPrefix = context.getArgument("methodPrefix").orElse("method_");
 
-		this.classPackagePrefix = prefix + this.classPrefix;
-	}
+        this.classPackagePrefix = prefix + this.classPrefix;
+    }
 
-	@Override
-	public boolean testDeobfuscated(Entry<?> entry) {
-		if (entry instanceof ClassEntry ce) {
-			String[] components = ce.getFullName().split("\\$");
+    @Override
+    public boolean testDeobfuscated(Entry<?> entry) {
+        if (entry instanceof ClassEntry) {
+            String[] components = ((ClassEntry) entry).getFullName().split("\\$");
 
-			// all obfuscated components are, at their outermost, class_
-			String lastComponent = components[components.length - 1];
-			return !lastComponent.startsWith(this.classPrefix) && !lastComponent.startsWith(this.classPackagePrefix);
-		} else if (entry instanceof FieldEntry) {
-			return !entry.getName().startsWith(this.fieldPrefix);
-		} else if (entry instanceof MethodEntry) {
-			return !entry.getName().startsWith(this.methodPrefix);
-		} else {
-			// unknown type
-			return false;
-		}
+            // all obfuscated components are, at their outermost, class_
+            String lastComponent = components[components.length - 1];
+            return !lastComponent.startsWith(this.classPrefix) && !lastComponent.startsWith(this.classPackagePrefix);
+        } else if (entry instanceof FieldEntry) {
+            return !entry.getName().startsWith(this.fieldPrefix);
+        } else if (entry instanceof MethodEntry) {
+            return !entry.getName().startsWith(this.methodPrefix);
+        } else {
+            // unknown type
+            return false;
+        }
 
-		// known type, not obfuscated
-	}
+        // known type, not obfuscated
+    }
 }

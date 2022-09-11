@@ -25,17 +25,20 @@ public class CalamusUtil
         if (args != null) {
             for (int i = 2; i < args.length; i++) {
                 switch (args[i].toLowerCase(Locale.ROOT)) {
-                    case "-t", "--target-namespace" -> {
+                    case "-t":
+                    case "--target-namespace":
                         state.setTargetNamespace(args[i + 1]);
                         i++;
-                    }
-                    case "-p", "--obfuscation-pattern" -> {
+                        break;
+                    case "-p":
+                    case "--obfuscation-pattern":
                         if (!clearedPatterns)
                             state.clearObfuscatedPatterns();
                         clearedPatterns = true;
+
                         state.addObfuscatedPattern(args[i + 1]);
                         i++;
-                    }
+                        break;
                 }
             }
         }
@@ -67,17 +70,20 @@ public class CalamusUtil
 
         for (int i = 5; i < args.length; i++) {
             switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "-t", "--target-namespace" -> {
+                case "-t":
+                case "--target-namespace":
                     state.setTargetNamespace(args[i + 1]);
                     i++;
-                }
-                case "-p", "--obfuscation-pattern" -> {
+                    break;
+                case "-p":
+                case "--obfuscation-pattern":
                     if (!clearedPatterns)
                         state.clearObfuscatedPatterns();
                     clearedPatterns = true;
+
                     state.addObfuscatedPattern(args[i + 1]);
                     i++;
-                }
+                    break;
             }
         }
 

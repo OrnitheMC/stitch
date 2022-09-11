@@ -26,9 +26,7 @@ import org.objectweb.asm.MethodVisitor;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.jar.JarInputStream;
 
@@ -76,7 +74,7 @@ public class JarReader
                                 bytes = reader.b;
                             }
 
-                            var classEntry = new JarClassEntry.ClassEntryPopulator(access, signature, superName, interfaces, bytes);
+                            JarClassEntry.ClassEntryPopulator classEntry = new JarClassEntry.ClassEntryPopulator(access, signature, superName, interfaces, bytes);
                             this.classEntry = jar.getClass(name, classEntry, true);
                         }
 

@@ -42,7 +42,7 @@ public class JarRootEntry extends AbstractJarEntry
         this.allClasses = new ArrayList<>();
 
         long startedAt = System.nanoTime();
-        try (var jarFile = new JarFile(file)) {
+        try (JarFile jarFile = new JarFile(file)) {
             Enumeration<JarEntry> entries = jarFile.entries();
             JarEntry entry;
 

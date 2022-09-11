@@ -170,5 +170,40 @@ public class JarClassEntry extends AbstractJarEntry
         return getFullyQualifiedName();
     }
 
-    public record ClassEntryPopulator(int access, String signature, String superclass, String[] interfaces, byte[] bytecode) { }
+    public static final class ClassEntryPopulator
+    {
+        private final int access;
+        private final String signature;
+        private final String superclass;
+        private final String[] interfaces;
+        private final byte[] bytecode;
+
+        public ClassEntryPopulator(int access, String signature, String superclass, String[] interfaces, byte[] bytecode) {
+            this.access = access;
+            this.signature = signature;
+            this.superclass = superclass;
+            this.interfaces = interfaces;
+            this.bytecode = bytecode;
+        }
+
+        public int access() {
+            return access;
+        }
+
+        public String signature() {
+            return signature;
+        }
+
+        public String superclass() {
+            return superclass;
+        }
+
+        public String[] interfaces() {
+            return interfaces;
+        }
+
+        public byte[] bytecode() {
+            return bytecode;
+        }
+    }
 }

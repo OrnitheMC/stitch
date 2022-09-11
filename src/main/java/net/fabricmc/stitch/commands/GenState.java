@@ -71,8 +71,8 @@ public class GenState
 
     public String next(AbstractJarEntry entry, String name) {
         return name + "_" + values.computeIfAbsent(entry, (e) -> {
-            var bigInt = new BigInteger(e.getHash());
-            var builder = new StringBuilder();
+            BigInteger bigInt = new BigInteger(e.getHash());
+            StringBuilder builder = new StringBuilder();
 
             for (int i = 0; i < 7; i++) {
                 int digit = bigInt.mod(BigInteger.valueOf(26)).intValue();

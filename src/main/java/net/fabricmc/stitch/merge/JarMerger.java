@@ -23,7 +23,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributeView;
@@ -32,10 +33,10 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-public class JarMerger implements AutoCloseable {
-    public record Entry(Path path, BasicFileAttributes metadata, byte[] data) { }
-
+public class JarMerger implements AutoCloseable
+{
     private static final ClassMerger CLASS_MERGER = new ClassMerger();
     private final StitchUtil.FileSystemDelegate inputClientFs, inputServerFs, outputFs;
     private final Path inputClient, inputServer;
@@ -43,7 +44,6 @@ public class JarMerger implements AutoCloseable {
     private final Set<String> entriesAll;
     private boolean removeSnowmen = false;
     private boolean offsetSyntheticsParams = false;
-
     public JarMerger(File inputClient, File inputServer, File output) throws IOException {
         if (output.exists()) {
             if (!output.delete()) {
@@ -77,7 +77,7 @@ public class JarMerger implements AutoCloseable {
 
     private void readToMap(Map<String, Entry> map, Path input) {
         try {
-            Files.walkFileTree(input, new SimpleFileVisitor<>()
+            Files.walkFileTree(input, new SimpleFileVisitor<Path>()
             {
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attr) throws IOException {
@@ -125,11 +125,11 @@ public class JarMerger implements AutoCloseable {
         }
 
         Files.getFileAttributeView(entry.path, BasicFileAttributeView.class)
-                .setTimes(
-                        entry.metadata.creationTime(),
-                        entry.metadata.lastAccessTime(),
-                        entry.metadata.lastModifiedTime()
-                );
+              .setTimes(
+                    entry.metadata.creationTime(),
+                    entry.metadata.lastAccessTime(),
+                    entry.metadata.lastModifiedTime()
+              );
     }
 
     public void merge() throws IOException {
@@ -208,10 +208,23 @@ public class JarMerger implements AutoCloseable {
             } else {
                 return null;
             }
-        }).filter(Objects::nonNull).toList();
+        }).filter(Objects::nonNull).collect(Collectors.toList());
 
         for (Entry e : entries) {
             add(e);
+        }
+    }
+
+    public static class Entry
+    {
+        public final Path path;
+        public final BasicFileAttributes metadata;
+        public final byte[] data;
+
+        public Entry(Path path, BasicFileAttributes metadata, byte[] data) {
+            this.path = path;
+            this.metadata = metadata;
+            this.data = data;
         }
     }
 }
