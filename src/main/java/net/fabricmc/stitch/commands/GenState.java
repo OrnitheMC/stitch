@@ -444,16 +444,25 @@ public class GenState
                 }
 
                 if (cname == null && newToOld != null) {
-                    String findName = newToOld.getClass(c.getFullyQualifiedName());
+                    String fullName = c.getFullyQualifiedName();
+                    String findName = newToOld.getClass(fullName);
                     if (findName != null) {
                         findName = oldToCalamus.getClass(findName);
                         if (findName != null) {
-                            String[] r = findName.split("\\$");
-                            cname = r[r.length - 1];
-                            if (r.length == 1) {
-                                translatedPrefix = "";
+                            String[] nr = fullName.split("\\$");
+                            String[] or = findName.split("\\$");
+                            if (or.length == 1) {
+                                if (nr.length > 1) {
+                                    // nesting level changed; respect new nesting hierarchy
+                                    // old name not nested; remove package name
+                                    cname = findName.substring(findName.lastIndexOf('/') + 1);
+                                } else {
+                                    cname = findName;
+                                    translatedPrefix = "";
+                                }
+                            } else {
+                                cname = or[or.length - 1];
                             }
-
                         }
                     }
                 }
