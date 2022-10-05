@@ -422,6 +422,8 @@ public class GenState
     private void addClass(BufferedWriter writer, JarClassEntry c, JarRootEntry storageOld, JarRootEntry storage, String translatedPrefix) throws IOException {
         String className = c.getName();
         String cname = "";
+        String localName = stripLocalClassPrefix(className);
+        translatedPrefix += className.substring(0, localName.length());
         String prefixSaved = translatedPrefix;
 
         if (this.obfuscatedPatterns.stream().noneMatch(p -> p.matcher(className).matches())) {
@@ -436,7 +438,7 @@ public class GenState
                     String findName = newToCalamus.getClass(c.getFullyQualifiedName());
                     if (findName != null) {
                         String[] r = findName.split("\\$");
-                        cname = r[r.length - 1];
+                        cname = stripLocalClassPrefix(r[r.length - 1]);
                         if (r.length == 1) {
                             translatedPrefix = "";
                         }
@@ -461,7 +463,7 @@ public class GenState
                                     translatedPrefix = "";
                                 }
                             } else {
-                                cname = or[or.length - 1];
+                                cname = stripLocalClassPrefix(or[or.length - 1]);
                             }
                         }
                     }
@@ -515,6 +517,21 @@ public class GenState
         for (JarClassEntry cc : c.getInnerClasses()) {
             addClass(writer, cc, storageOld, storage, translatedPrefix + cname + "$");
         }
+    }
+
+    private String stripLocalClassPrefix(String innerName) {
+        int localStart = 0;
+
+        // local class names start with a number prefix
+        while (localStart < innerName.length() && Character.isDigit(innerName.charAt(localStart))) {
+            localStart++;
+        }
+        // if entire inner name is a number, this class is anonymous, not local
+        if (localStart == innerName.length()) {
+            localStart = 0;
+        }
+
+        return innerName.substring(localStart);
     }
 
     public void prepareRewrite(File oldMappings) throws IOException {
