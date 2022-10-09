@@ -422,7 +422,7 @@ public class GenState
     private void addClass(BufferedWriter writer, JarClassEntry c, JarRootEntry storageOld, JarRootEntry storage, String translatedPrefix) throws IOException {
         String className = c.getName();
         String cname = "";
-        String localName = stripLocalClassPrefix(className);
+        String localName = stripLocalClassPrefix(stripOuterName(className));
         translatedPrefix += className.substring(0, localName.length());
         String prefixSaved = translatedPrefix;
 
@@ -517,6 +517,11 @@ public class GenState
         for (JarClassEntry cc : c.getInnerClasses()) {
             addClass(writer, cc, storageOld, storage, translatedPrefix + cname + "$");
         }
+    }
+
+    private String stripOuterName(String className) {
+        int i = className.lastIndexOf('$');
+        return i < 0 ? "" : className.substring(i + 1);
     }
 
     private String stripLocalClassPrefix(String innerName) {
