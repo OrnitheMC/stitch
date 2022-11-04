@@ -421,16 +421,16 @@ public class GenState
 
     private void addClass(BufferedWriter writer, JarClassEntry c, JarRootEntry storageOld, JarRootEntry storage, String translatedPrefix) throws IOException {
         String className = c.getName();
+        String localName = stripLocalClassPrefix(className);
         String cname = "";
-        String localName = stripLocalClassPrefix(stripOuterName(className));
-        translatedPrefix += className.substring(0, localName.length());
+        translatedPrefix += className.substring(0, className.length() - localName.length());
         String prefixSaved = translatedPrefix;
 
         if (this.obfuscatedPatterns.stream().noneMatch(p -> p.matcher(className).matches())) {
             translatedPrefix = c.getFullyQualifiedName();
         } else {
             if (!isMappedClass(c)) {
-                cname = c.getName();
+                cname = localName;
             } else {
                 cname = null;
 
@@ -517,11 +517,6 @@ public class GenState
         for (JarClassEntry cc : c.getInnerClasses()) {
             addClass(writer, cc, storageOld, storage, translatedPrefix + cname + "$");
         }
-    }
-
-    private String stripOuterName(String className) {
-        int i = className.lastIndexOf('$');
-        return i < 0 ? "" : className.substring(i + 1);
     }
 
     private String stripLocalClassPrefix(String innerName) {
