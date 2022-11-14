@@ -69,18 +69,12 @@ public class GenState
     public void setWriteAll() {
     }
 
-    public String next(AbstractJarEntry entry, String name) {
-        return name + "_" + values.computeIfAbsent(entry, (e) -> {
+    public String next(AbstractJarEntry entry, String prefix) {
+        return prefix + "_" + values.computeIfAbsent(entry, (e) -> {
             BigInteger bigInt = new BigInteger(e.getHash());
             StringBuilder builder = new StringBuilder();
 
-            for (int i = 0; i < 7; i++) {
-                int digit = bigInt.mod(BigInteger.valueOf(26)).intValue();
-                bigInt = bigInt.divide(BigInteger.valueOf(26));
-
-                builder.insert(0, (char) ('a' + digit));
-            }
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < 8; i++) {
                 int digit = bigInt.mod(BigInteger.valueOf(10)).intValue();
                 bigInt = bigInt.divide(BigInteger.valueOf(10));
 
