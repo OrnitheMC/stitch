@@ -1,26 +1,21 @@
 package net.fabricmc.stitch.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+
 import net.fabricmc.stitch.commands.GenState;
 import net.fabricmc.stitch.representation.JarReader;
 import net.fabricmc.stitch.representation.JarRootEntry;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Locale;
-
 public class CalamusUtil
 {
     public static void generateCalamus(File jarFile, File calamusFile, String[] args) throws IOException {
-        JarRootEntry jarEntry = new JarRootEntry(jarFile);
-        try {
-            JarReader reader = new JarReader(jarEntry);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
         GenState state = new GenState();
         boolean clearedPatterns = false;
+        ByteBuffer salt = ByteBuffer.allocate(256);
 
         if (args != null) {
             for (int i = 2; i < args.length; i++) {
@@ -39,8 +34,20 @@ public class CalamusUtil
                         state.addObfuscatedPattern(args[i + 1]);
                         i++;
                         break;
+                    case "--client-hash":
+                    case "--server-hash":
+                        salt.put(args[i + 1].getBytes(StandardCharsets.UTF_8));
+                        i++;
+                        break;
                 }
             }
+        }
+
+        JarRootEntry jarEntry = new JarRootEntry(jarFile);
+        try {
+            new JarReader(jarEntry).apply(salt.array());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         System.err.println("Generating new mappings...");
@@ -49,24 +56,9 @@ public class CalamusUtil
     }
 
     public static void updateCalamus(File oldJarFile, File newJarFile, File oldCalamusFile, File newCalamusFile, File matchesFile, String[] args) throws IOException {
-        JarRootEntry jarOld = new JarRootEntry(oldJarFile);
-        try {
-            JarReader reader = new JarReader(jarOld);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        JarRootEntry jarNew = new JarRootEntry(newJarFile);
-        try {
-            JarReader reader = new JarReader(jarNew);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
         GenState state = new GenState();
         boolean clearedPatterns = false;
+        ByteBuffer salt = ByteBuffer.allocate(256);
 
         for (int i = 5; i < args.length; i++) {
             switch (args[i].toLowerCase(Locale.ROOT)) {
@@ -84,7 +76,26 @@ public class CalamusUtil
                     state.addObfuscatedPattern(args[i + 1]);
                     i++;
                     break;
+                case "--client-hash":
+                case "--server-hash":
+                    salt.put(args[i + 1].getBytes(StandardCharsets.UTF_8));
+                    i++;
+                    break;
             }
+        }
+
+        JarRootEntry jarOld = new JarRootEntry(oldJarFile);
+        try {
+            new JarReader(jarOld).apply(salt.array());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        JarRootEntry jarNew = new JarRootEntry(newJarFile);
+        try {
+            new JarReader(jarNew).apply(salt.array());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         System.err.println("Loading remapping files...");

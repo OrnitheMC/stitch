@@ -17,7 +17,9 @@
 
 package net.fabricmc.stitch.representation;
 
+import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.StitchUtil;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -25,6 +27,7 @@ import org.objectweb.asm.MethodVisitor;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
@@ -39,6 +42,16 @@ public class JarReader
     }
 
     public void apply() throws IOException {
+        apply(new byte[] { });
+    }
+
+    public void apply(byte[] salt) throws IOException {
+        Main.MESSAGE_DIGEST.reset();
+        Main.MESSAGE_DIGEST.update(salt);
+        Main.MESSAGE_DIGEST.update(jar.getKey().getBytes(StandardCharsets.UTF_8));
+
+        jar.jarHash = Main.MESSAGE_DIGEST.digest();
+
         // Stage 1: read .JAR class/field/method meta
         try (FileInputStream fileStream = new FileInputStream(jar.file)) {
             try (JarInputStream jarStream = new JarInputStream(fileStream)) {

@@ -20,7 +20,6 @@ package net.fabricmc.stitch.representation;
 import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.StitchUtil;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -37,7 +36,6 @@ public class JarMethodEntry extends AbstractJarEntry
         this.signature = signature;
 
         Main.MESSAGE_DIGEST.update(parentClass.getHash());
-        Main.MESSAGE_DIGEST.update(BigInteger.valueOf(access).toByteArray());
         Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
         this.saltedMethodHash = Main.MESSAGE_DIGEST.digest();
     }

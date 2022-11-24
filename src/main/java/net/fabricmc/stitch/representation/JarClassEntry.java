@@ -20,6 +20,7 @@ package net.fabricmc.stitch.representation;
 import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.Pair;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,7 +53,8 @@ public class JarClassEntry extends AbstractJarEntry
         this.interfaces = Arrays.asList(populator.interfaces());
 
         Main.MESSAGE_DIGEST.update(parentJar.getHash());
-        this.saltedClassHash = Main.MESSAGE_DIGEST.digest(populator.bytecode());
+        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
+        this.saltedClassHash = Main.MESSAGE_DIGEST.digest();
 
         this.subclasses = new ArrayList<>();
         this.implementers = new ArrayList<>();

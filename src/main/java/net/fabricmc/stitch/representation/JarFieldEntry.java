@@ -19,7 +19,6 @@ package net.fabricmc.stitch.representation;
 
 import net.fabricmc.stitch.Main;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
 public class JarFieldEntry extends AbstractJarEntry
@@ -35,7 +34,6 @@ public class JarFieldEntry extends AbstractJarEntry
         this.signature = signature;
 
         Main.MESSAGE_DIGEST.update(parentClass.getHash());
-        Main.MESSAGE_DIGEST.update(BigInteger.valueOf(access).toByteArray());
         Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
         this.saltedFieldHash = Main.MESSAGE_DIGEST.digest();
     }

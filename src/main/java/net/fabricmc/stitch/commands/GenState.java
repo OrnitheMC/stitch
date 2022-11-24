@@ -74,7 +74,7 @@ public class GenState
             BigInteger bigInt = new BigInteger(e.getHash());
             StringBuilder builder = new StringBuilder();
 
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 10; i++) {
                 int digit = bigInt.mod(BigInteger.valueOf(10)).intValue();
                 bigInt = bigInt.divide(BigInteger.valueOf(10));
 
