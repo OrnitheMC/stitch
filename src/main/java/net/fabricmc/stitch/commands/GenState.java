@@ -43,7 +43,7 @@ public class GenState
     private String targetNamespace = "net/minecraft/";
 
     public GenState() {
-        this.obfuscatedPatterns.add(Pattern.compile("[A-Z]")); // Default ofbfuscation. Obfuscated names are all lowercase
+        this.obfuscatedPatterns.add(Pattern.compile("^[^A-Z]*$")); // Default ofbfuscation. Obfuscated names are all lowercase
     }
 
     public static boolean isMappedClass(JarClassEntry c) {
