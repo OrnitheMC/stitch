@@ -20,8 +20,6 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.CalamusUtil;
 
-import java.io.*;
-
 public class CommandGenerateCalamus extends Command {
     public CommandGenerateCalamus() {
         super("generateCalamus");
@@ -39,8 +37,6 @@ public class CommandGenerateCalamus extends Command {
 
     @Override
     public void run(String[] args) throws Exception {
-        File jarFile = new File(args[0]);
-        File calamusFile = new File(args[1]);
-        CalamusUtil.generateCalamus(jarFile, calamusFile, args);
+        CalamusUtil.generateCalamus(CalamusUtil.parseArgs(args));
     }
 }

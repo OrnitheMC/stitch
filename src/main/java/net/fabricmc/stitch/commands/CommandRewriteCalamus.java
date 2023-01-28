@@ -23,6 +23,7 @@ import net.fabricmc.stitch.representation.JarReader;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class CommandRewriteCalamus extends Command {
@@ -69,7 +70,7 @@ public class CommandRewriteCalamus extends Command {
         }
 
         System.err.println("Rewriting mappings...");
-        state.generate(outFile, jarOld, jarOld);
+        state.generate(outFile, jarOld, Arrays.asList(jarOld));
         System.err.println("Done!");
     }
 

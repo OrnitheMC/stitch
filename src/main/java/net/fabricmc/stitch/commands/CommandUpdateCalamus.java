@@ -20,8 +20,6 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.CalamusUtil;
 
-import java.io.File;
-
 public class CommandUpdateCalamus extends Command {
     public CommandUpdateCalamus() {
         super("updateCalamus");
@@ -29,7 +27,7 @@ public class CommandUpdateCalamus extends Command {
 
     @Override
     public String getHelpString() {
-        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--client-hash <hash>] [--server-hash <hash>]";
+        return "<old-jars>... <new-jar> <old-mapping-files>... <new-mapping-file> <match-files>... [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--client-hash <hash>] [--server-hash <hash>]";
     }
 
     @Override
@@ -39,11 +37,6 @@ public class CommandUpdateCalamus extends Command {
 
     @Override
     public void run(String[] args) throws Exception {
-        File oldJarFile = new File(args[0]);
-        File newJarFile = new File(args[1]);
-        File oldCalamusFile = new File(args[2]);
-        File newCalamusFile = new File(args[3]);
-        File matchesFile = new File(args[4]);
-        CalamusUtil.updateCalamus(oldJarFile, newJarFile, oldCalamusFile, newCalamusFile, matchesFile, args);
+        CalamusUtil.updateCalamus(CalamusUtil.parseArgs(args));
     }
 }
