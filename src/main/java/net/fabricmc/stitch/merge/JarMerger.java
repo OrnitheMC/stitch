@@ -124,7 +124,7 @@ public class JarMerger implements AutoCloseable
             Files.copy(entry.path, outPath);
         }
 
-        Files.getFileAttributeView(entry.path, BasicFileAttributeView.class)
+        Files.getFileAttributeView(outPath, BasicFileAttributeView.class)
               .setTimes(
                     entry.metadata.creationTime(),
                     entry.metadata.lastAccessTime(),
