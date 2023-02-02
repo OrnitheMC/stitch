@@ -470,7 +470,8 @@ public class GenState
                     }
                 }
 
-                if (cname != null && !cname.contains("C_")) {
+                if (cname != null && cname.matches("\\d+")) {
+                    // old class is anonymous, new class is not
                     String newName = next(c, "C");
                     System.out.println(cname + " is now " + newName);
                     cname = newName;
