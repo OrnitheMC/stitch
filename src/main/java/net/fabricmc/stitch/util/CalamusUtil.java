@@ -147,10 +147,17 @@ public class CalamusUtil
     }
 
     public static Args parseOptions(String[] options) {
-        String[] args = new String[options.length + 2];
-        for (int i = 0; i < options.length; i++) {
-            args[i + 2] = options[i];
+        int extraLength = 2;
+        String[] args = new String[options.length + extraLength];
+
+        for (int i = 0; i < args.length; i++) {
+            if (i < extraLength) {
+                args[i] = "";
+            } else {
+                args[i] = options[i - extraLength];
+            }
         }
+
         return parseArgs(args);
     }
 
