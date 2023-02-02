@@ -55,6 +55,9 @@ public class CalamusUtil
                 state.addObfuscatedPattern(pattern);
             }
         }
+        if (args.nameLength != null) {
+            state.setNameLength(args.nameLength);
+        }
         ByteBuffer salt = ByteBuffer.allocate(256);
         if (args.clientHash != null) {
             salt.put(args.clientHash.getBytes(StandardCharsets.UTF_8));
@@ -109,6 +112,9 @@ public class CalamusUtil
             case "--obfuscation-pattern":
                 args.obfuscationPatterns.add(rawArgs[++i]);
                 break;
+            case "--name-length":
+                args.nameLength = Integer.parseInt(rawArgs[++i]);
+                break;
             case "--client-hash":
                 args.clientHash = rawArgs[++i];
                 break;
@@ -158,6 +164,7 @@ public class CalamusUtil
 
         private String targetNamespace;
         private List<String> obfuscationPatterns = new ArrayList<>();
+        private Integer nameLength;
         private String clientHash;
         private String serverHash;
 

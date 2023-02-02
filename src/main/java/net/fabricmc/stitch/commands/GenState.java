@@ -41,6 +41,7 @@ public class GenState
     private final List<GenMap> oldToCalamus = new ArrayList<>(), newToOld = new ArrayList<>();
     private GenMap newToCalamus;
     private String targetNamespace = "net/minecraft/";
+    private int nameLength = 6;
 
     public GenState() {
         this.obfuscatedPatterns.add(Pattern.compile("^[^A-Z]*$")); // Default ofbfuscation. Obfuscated names are all lowercase
@@ -74,7 +75,7 @@ public class GenState
             BigInteger bigInt = new BigInteger(e.getHash());
             StringBuilder builder = new StringBuilder();
 
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < nameLength; i++) {
                 int digit = bigInt.mod(BigInteger.valueOf(10)).intValue();
                 bigInt = bigInt.divide(BigInteger.valueOf(10));
 
@@ -98,6 +99,14 @@ public class GenState
 
     public void addObfuscatedPattern(String regex) throws PatternSyntaxException {
         this.obfuscatedPatterns.add(Pattern.compile(regex));
+    }
+
+    public void setNameLength(int length) {
+        if (length < 2) {
+            throw new IllegalArgumentException("name length cannot be less than 2!");
+        }
+
+        this.nameLength = length;
     }
 
     public void generate(File file, JarRootEntry jarEntry, List<JarRootEntry> jarsOld) throws IOException {
