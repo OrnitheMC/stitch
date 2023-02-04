@@ -461,19 +461,17 @@ public class GenState
                             if (findName != null) {
                                 String[] nr = fullName.split("\\$");
                                 String[] or = findName.split("\\$");
-                                if (or.length == 1) {
+                                if (or.length == nr.length) {
                                     if (nr.length > 1) {
-                                        // nesting level changed; respect new nesting hierarchy
-                                        // old name not nested; remove package name
-                                        cname = findName.substring(findName.lastIndexOf('/') + 1);
+                                        cname = stripLocalClassPrefix(or[or.length - 1]);
                                     } else {
                                         cname = findName;
                                         translatedPrefix = "";
                                     }
+                                    break;
                                 } else {
-                                    cname = stripLocalClassPrefix(or[or.length - 1]);
+                                    // nesting level changed; matching name is not necessary
                                 }
-                                break;
                             }
                         }
                     }
