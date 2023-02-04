@@ -53,7 +53,7 @@ public class JarClassEntry extends AbstractJarEntry
         this.interfaces = Arrays.asList(populator.interfaces());
 
         Main.MESSAGE_DIGEST.update(parentJar.getHash());
-        Main.MESSAGE_DIGEST.update(this.name.getBytes(StandardCharsets.UTF_8));
+        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
         this.saltedClassHash = Main.MESSAGE_DIGEST.digest();
 
         this.subclasses = new ArrayList<>();
