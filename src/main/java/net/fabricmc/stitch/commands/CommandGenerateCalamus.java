@@ -27,7 +27,7 @@ public class CommandGenerateCalamus extends Command {
 
     @Override
     public String getHelpString() {
-        return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]...";
+        return "<input-jar> <mapping-name> [--default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]...";
     }
 
     @Override

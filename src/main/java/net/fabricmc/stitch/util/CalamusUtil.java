@@ -46,6 +46,9 @@ public class CalamusUtil
     public static void updateCalamus(Args args) throws IOException {
         GenState state = new GenState();
 
+        if (args.defaultPackage != null) {
+            state.setDefaultPackage(args.defaultPackage);
+        }
         if (args.targetNamespace != null) {
             state.setTargetNamespace(args.targetNamespace);
         }
@@ -104,6 +107,9 @@ public class CalamusUtil
         // first two args are always files
         for (int i = 2; i < rawArgs.length; i++) {
             switch (rawArgs[i].toLowerCase(Locale.ROOT)) {
+            case "--default-package":
+                args.defaultPackage = rawArgs[++i];
+                break;
             case "-t":
             case "--target-namespace":
                 args.targetNamespace = rawArgs[++i];
@@ -169,6 +175,7 @@ public class CalamusUtil
         private File newCalamusFile;
         private List<File> matchesFiles = new ArrayList<>();
 
+        private String defaultPackage;
         private String targetNamespace;
         private List<String> obfuscationPatterns = new ArrayList<>();
         private Integer nameLength;

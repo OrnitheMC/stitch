@@ -40,7 +40,8 @@ public class GenState
     private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
     private final List<GenMap> oldToCalamus = new ArrayList<>(), newToOld = new ArrayList<>();
     private GenMap newToCalamus;
-    private String targetNamespace = "net/minecraft/";
+    private String defaultPackage = "net/minecraft/";
+    private String targetNamespace = "intermediary";
     private int nameLength = 6;
 
     public GenState() {
@@ -86,11 +87,15 @@ public class GenState
         });
     }
 
-    public void setTargetNamespace(final String namespace) {
-        if (namespace.lastIndexOf("/") != (namespace.length() - 1))
-            this.targetNamespace = namespace + "/";
+    public void setDefaultPackage(final String defaultPackage) {
+        if (defaultPackage.lastIndexOf("/") != (defaultPackage.length() - 1))
+            this.defaultPackage = defaultPackage + "/";
         else
-            this.targetNamespace = namespace;
+            this.defaultPackage = defaultPackage;
+    }
+
+    public void setTargetNamespace(final String namespace) {
+        this.targetNamespace = namespace;
     }
 
     public void clearObfuscatedPatterns() {
@@ -118,7 +123,7 @@ public class GenState
                 newToCalamus.load(
                       MappingsProvider.readTinyMappings(inputStream),
                       "official",
-                      "calamus"
+                      targetNamespace
                 );
             }
         }
@@ -128,7 +133,7 @@ public class GenState
                 writer.write("v1\tofficial\tcalamus\n");
 
                 for (JarClassEntry c : jarEntry.getClasses()) {
-                    addClass(writer, c, jarsOld, jarEntry, this.targetNamespace);
+                    addClass(writer, c, jarsOld, jarEntry, this.defaultPackage);
                 }
             }
         }
@@ -552,7 +557,7 @@ public class GenState
             oldToCalamus.load(
                   MappingsProvider.readTinyMappings(inputStream),
                   "official",
-                  "calamus"
+                  targetNamespace
             );
         }
 
@@ -569,7 +574,7 @@ public class GenState
             oldToCalamus.load(
                   MappingsProvider.readTinyMappings(inputStream),
                   "official",
-                  "calamus"
+                  targetNamespace
             );
         }
 
