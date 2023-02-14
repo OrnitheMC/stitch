@@ -130,7 +130,7 @@ public class GenState
 
         try (FileWriter fileWriter = new FileWriter(file)) {
             try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
-                writer.write("v1\tofficial\tcalamus\n");
+                writer.write(String.format("v1\tofficial\t%s\n", targetNamespace));
 
                 for (JarClassEntry c : jarEntry.getClasses()) {
                     addClass(writer, c, jarsOld, jarEntry, this.defaultPackage);
