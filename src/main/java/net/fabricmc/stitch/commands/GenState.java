@@ -133,10 +133,23 @@ public class GenState
                 writer.write(String.format("v1\tofficial\t%s\n", targetNamespace));
 
                 for (JarClassEntry c : jarEntry.getClasses()) {
-                    addClass(writer, c, jarsOld, jarEntry, this.defaultPackage);
+                    addClass(writer, c, jarsOld, jarEntry, getTargetPackage(c));
                 }
             }
         }
+    }
+
+    private String getTargetPackage(JarClassEntry c) {
+        String name = c.getFullyQualifiedName();
+        int idx = name.lastIndexOf('/');
+
+        if (idx > 0) {
+            // class is not in default package (i.e. no package)
+            // so to avoid illegal access errors keep it there
+            return name.substring(0, idx + 1);
+        }
+
+        return this.defaultPackage;
     }
 
     @Nullable
