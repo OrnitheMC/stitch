@@ -463,9 +463,10 @@ public class GenState
                     String findName = newToCalamus.getClass(c.getFullyQualifiedName());
                     if (findName != null) {
                         String[] r = findName.split("\\$");
-                        cname = stripLocalClassPrefix(r[r.length - 1]);
-                        if (r.length == 1) {
-                            translatedPrefix = "";
+                        if (r.length > 1) {
+                            cname = stripLocalClassPrefix(r[r.length - 1]);
+                        } else {
+                            cname = stripPackageName(findName);
                         }
                     }
                 }
@@ -483,8 +484,7 @@ public class GenState
                                     if (nr.length > 1) {
                                         cname = stripLocalClassPrefix(or[or.length - 1]);
                                     } else {
-                                        cname = findName;
-                                        translatedPrefix = "";
+                                        cname = stripPackageName(findName);
                                     }
                                     break;
                                 } else {
@@ -495,8 +495,7 @@ public class GenState
                     }
                 }
 
-                if (cname != null && cname.matches("\\d+")) {
-                    // old class is anonymous, new class is not
+                if (cname != null && !cname.contains("C_")) {
                     String newName = next(c, "C");
                     System.out.println(cname + " is now " + newName);
                     cname = newName;
@@ -559,6 +558,10 @@ public class GenState
         }
 
         return innerName.substring(localStart);
+    }
+
+    private String stripPackageName(String className) {
+        return className.substring(className.lastIndexOf('/') + 1);
     }
 
     public void prepareRewrite(File oldMappings) throws IOException {
