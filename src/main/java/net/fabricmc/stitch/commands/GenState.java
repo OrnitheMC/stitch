@@ -581,26 +581,31 @@ public class GenState
         this.newToOld.add(newToOld);
     }
 
-    public void prepareUpdate(File oldMappings, File matches) throws IOException {
-        GenMap oldToCalamus = new GenMap();
-        GenMap newToOld = new GenMap();
+    public void prepareUpdate(List<File> oldMappings, List<File> matches) throws IOException {
+        this.oldToCalamus.clear();
+        this.newToOld.clear();
 
-        try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
-            //noinspection deprecation
-            oldToCalamus.load(
-                  MappingsProvider.readTinyMappings(inputStream),
-                  "official",
-                  targetNamespace
-            );
-        }
+        for (int i = 0; i < oldMappings.size(); i++) {
+            GenMap oldToCalamus = new GenMap();
+            GenMap newToOld = new GenMap();
 
-        try (FileReader fileReader = new FileReader(matches)) {
-            try (BufferedReader reader = new BufferedReader(fileReader)) {
-                MatcherUtil.read(reader, true, newToOld::addClass, newToOld::addField, newToOld::addMethod);
+            try (FileInputStream inputStream = new FileInputStream(oldMappings.get(i))) {
+                //noinspection deprecation
+                oldToCalamus.load(
+                    MappingsProvider.readTinyMappings(inputStream),
+                    "official",
+                    targetNamespace
+                );
             }
-        }
 
-        this.oldToCalamus.add(oldToCalamus);
-        this.newToOld.add(newToOld);
+            try (FileReader fileReader = new FileReader(matches.get(i))) {
+                try (BufferedReader reader = new BufferedReader(fileReader)) {
+                    MatcherUtil.read(reader, true, newToOld::addClass, newToOld::addField, newToOld::addMethod);
+                }
+            }
+
+            this.oldToCalamus.add(oldToCalamus);
+            this.newToOld.add(newToOld);
+        }
     }
 }

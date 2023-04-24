@@ -89,9 +89,7 @@ public class CalamusUtil
 
         if (!args.oldCalamusFiles.isEmpty()) {
             System.err.println("Loading remapping files...");
-            for (int i = 0; i < args.oldCalamusFiles.size(); i++) {
-                state.prepareUpdate(args.oldCalamusFiles.get(i), args.matchesFiles.get(i));
-            }
+            state.prepareUpdate(args.oldCalamusFiles, args.matchesFiles);
         }
 
         System.err.println("Generating new mappings...");
