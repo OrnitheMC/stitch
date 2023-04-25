@@ -53,6 +53,10 @@ public class JarRootEntry extends AbstractJarEntry
 
             if (ec != null) {
                 entry = ec.getInnerClass(simpleName);
+            } else {
+                i = -1;
+                simpleName = name;
+                entry = classTree.get(name);
             }
         } else {
             entry = classTree.get(name);
