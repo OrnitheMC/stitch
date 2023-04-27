@@ -17,25 +17,16 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.Main;
-
-import java.nio.charset.StandardCharsets;
-
 public class JarFieldEntry extends AbstractJarEntry
 {
-    final byte[] saltedFieldHash;
     protected String desc;
     protected String signature;
 
-    JarFieldEntry(int access, String name, String desc, String signature, JarClassEntry parentClass) {
-        super(name, parentClass.fullyQualifiedName);
+    JarFieldEntry(int access, String name, String desc, String signature, String parentName) {
+        super(name, parentName);
         this.setAccess(access);
         this.desc = desc;
         this.signature = signature;
-
-        Main.MESSAGE_DIGEST.update(parentClass.getHash());
-        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
-        this.saltedFieldHash = Main.MESSAGE_DIGEST.digest();
     }
 
     public String getDescriptor() {
@@ -49,10 +40,5 @@ public class JarFieldEntry extends AbstractJarEntry
     @Override
     protected String getKey() {
         return super.getKey() + desc;
-    }
-
-    @Override
-    public byte[] getHash() {
-        return saltedFieldHash;
     }
 }

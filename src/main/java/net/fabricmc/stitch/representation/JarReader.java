@@ -17,7 +17,7 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.Main;
+import net.fabricmc.stitch.representation.JarClassEntry.ClassEntryPopulator;
 import net.fabricmc.stitch.util.StitchUtil;
 
 import org.objectweb.asm.ClassReader;
@@ -27,9 +27,7 @@ import org.objectweb.asm.MethodVisitor;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.jar.JarInputStream;
 
@@ -46,12 +44,6 @@ public class JarReader
     }
 
     public void apply(byte[] salt) throws IOException {
-        Main.MESSAGE_DIGEST.reset();
-        Main.MESSAGE_DIGEST.update(salt);
-        Main.MESSAGE_DIGEST.update(jar.getKey().getBytes(StandardCharsets.UTF_8));
-
-        jar.jarHash = Main.MESSAGE_DIGEST.digest();
-
         // Stage 1: read .JAR class/field/method meta
         try (FileInputStream fileStream = new FileInputStream(jar.file)) {
             try (JarInputStream jarStream = new JarInputStream(fileStream)) {
@@ -68,10 +60,11 @@ public class JarReader
                     }
 
                     ClassReader reader = new ClassReader(jarStream);
-                    java.util.jar.JarEntry finalEntry = entry;
                     ClassVisitor visitor = new ClassVisitor(StitchUtil.ASM_VERSION, null)
                     {
-                        private JarClassEntry classEntry;
+                        private final Set<JarFieldEntry> fields = new LinkedHashSet<>();
+                        private final Set<JarMethodEntry> methods = new LinkedHashSet<>();
+                        private ClassEntryPopulator populator;
                         private long startedAt;
 
                         @SuppressWarnings("deprecation")
@@ -79,40 +72,61 @@ public class JarReader
                         public void visit(final int version, final int access, final String name, final String signature,
                                           final String superName, final String[] interfaces) {
                             startedAt = System.nanoTime();
+                            populator = new ClassEntryPopulator();
 
-                            byte[] bytes;
-                            if (finalEntry.getSize() < reader.b.length) {
-                                bytes = Arrays.copyOf(reader.b, (int) finalEntry.getSize());
-                            } else {
-                                bytes = reader.b;
-                            }
+                            populator.access = access;
+                            populator.name = name;
+                            populator.signature = signature;
+                            populator.superclass = superName;
+                            populator.interfaces = interfaces;
 
-                            JarClassEntry.ClassEntryPopulator classEntry = new JarClassEntry.ClassEntryPopulator(access, signature, superName, interfaces, bytes);
-                            this.classEntry = jar.getClass(name, classEntry, true);
+                            super.visit(version, access, name, signature, superName, interfaces);
                         }
 
                         @Override
                         public FieldVisitor visitField(final int access, final String name, final String descriptor,
                                                        final String signature, final Object value) {
-                            JarFieldEntry field = new JarFieldEntry(access, name, descriptor, signature, this.classEntry);
-                            this.classEntry.fields.put(field.getKey(), field);
+                            fields.add(new JarFieldEntry(access, name, descriptor, signature, populator.name));
 
-                            return null;
+                            return super.visitField(access, name, descriptor, signature, value);
                         }
 
                         @Override
                         public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
                                                          final String signature, final String[] exceptions) {
-                            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature, this.classEntry);
-                            this.classEntry.methods.put(method.getKey(), method);
+                            methods.add(new JarMethodEntry(access, name, descriptor, signature, populator.name));
 
-                            return null;
+                            return super.visitMethod(access, name, descriptor, signature, exceptions);
+                        }
+
+                        @Override
+                        public void visitOuterClass(final String owner, final String name, final String descriptor) {
+                            populator.enclosingClassName = owner;
+                            populator.enclosingMethodName = name;
+                            populator.enclosingMethodDescriptor = descriptor;
+
+                            super.visitOuterClass(owner, name, descriptor);
+                        }
+
+                        @Override
+                        public void visitInnerClass(final String name, final String outerName, final String innerName,
+                                                    final int access) {
+                            if (populator.name.equals(name)) {
+                                populator.nested = true; 
+                                populator.innerName = innerName;
+                            }
+
+                            super.visitInnerClass(name, outerName, innerName, access);
                         }
 
                         @Override
                         public void visitEnd() {
+                            JarClassEntry classEntry = jar.getClass(populator.name, populator, true);
+
                             long timeSpan = (System.nanoTime() - startedAt) / 1000;
-                            System.err.println("Loaded " + this.classEntry.getName() + " in " + timeSpan + "μs");
+                            System.err.println("Loaded " + populator + " in " + timeSpan + "μs");
+
+                            super.visitEnd();
                         }
                     };
                     reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
@@ -122,46 +136,17 @@ public class JarReader
 
         System.err.println("Read " + this.jar.getAllClasses().size() + " (" + this.jar.getClasses().size() + ") classes.");
 
-        // stage 2: find nested classes
-        Set<JarClassEntry> candidates = StitchUtil.newIdentityHashSet();
-        candidates.addAll(this.jar.getAllClasses());
-
-        int pass = 0;
-        int maxPasses = 100; // just in case...
-
-        while (!candidates.isEmpty()) {
-            Iterator<JarClassEntry> it = candidates.iterator();
-
-            while (it.hasNext()) {
-                JarClassEntry c = it.next();
-                String name = c.getFullyQualifiedName();
-                int i = name.lastIndexOf('$');
-
-                if (i > 0) {
-                    String enclName = name.substring(0, i);
-                    String simpleName = name.substring(i + 1);
-
-                    JarClassEntry ec = this.jar.getClass(enclName, null, false);
-
-                    if (ec != null) {
-                        ec.innerClasses.put(simpleName, c);
-                        it.remove();
-                    } else if (pass == maxPasses) {
-                        System.err.println("cannot find enclosing class " + enclName + " of class " + name);
-                    }
-                } else {
-                    it.remove();
-                }
-            }
-
-            if (pass++ > maxPasses) {
-                break;
-            }
-        }
-
-        // Stage 3: find subclasses
+        // Stage 2: find subclasses
         this.jar.getAllClasses().forEach((c) -> c.populateParents(jar));
         System.err.println("Populated subclass entries.");
+
+        // Stage 3: find inner classes
+        this.jar.getAllClasses().forEach((c) -> c.populateInnerClasses(jar));
+        System.err.println("Populated inner class entries.");
+
+        // Stage 4: hashing
+        this.jar.hash(salt);
+        System.err.println("Hashed jar entries.");
 
         System.err.println("- Done. -");
     }

@@ -17,27 +17,20 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.StitchUtil;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class JarMethodEntry extends AbstractJarEntry
 {
-    final byte[] saltedMethodHash;
     protected String desc;
     protected String signature;
 
-    protected JarMethodEntry(int access, String name, String desc, String signature, JarClassEntry parentClass) {
-        super(name, parentClass.fullyQualifiedName);
+    protected JarMethodEntry(int access, String name, String desc, String signature, String parentName) {
+        super(name, parentName);
         this.setAccess(access);
         this.desc = desc;
         this.signature = signature;
-
-        Main.MESSAGE_DIGEST.update(parentClass.getHash());
-        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
-        this.saltedMethodHash = Main.MESSAGE_DIGEST.digest();
     }
 
     public String getDescriptor() {
@@ -51,11 +44,6 @@ public class JarMethodEntry extends AbstractJarEntry
     @Override
     protected String getKey() {
         return super.getKey() + desc;
-    }
-
-    @Override
-    public byte[] getHash() {
-        return saltedMethodHash;
     }
 
     public boolean isSource(JarRootEntry storage, JarClassEntry c) {

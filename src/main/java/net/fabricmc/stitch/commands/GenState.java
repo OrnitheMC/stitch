@@ -49,7 +49,9 @@ public class GenState
     }
 
     public static boolean isMappedClass(JarClassEntry c) {
-        return !c.isAnonymous();
+        // if an anonymous class does not follow the convention
+        // for inner class names, we give it a new new anyway
+        return !c.isAnonymous() || !c.getName().startsWith(c.getEnclosingClassName() + "$");
     }
 
     public static boolean isMappedField(JarFieldEntry f) {
@@ -140,7 +142,7 @@ public class GenState
     }
 
     private String getTargetPackage(JarClassEntry c) {
-        String name = c.getFullyQualifiedName();
+        String name = c.getName();
         int idx = name.lastIndexOf('/');
 
         if (idx > 0) {
@@ -160,7 +162,7 @@ public class GenState
 
         if (newToCalamus != null) {
             //noinspection deprecation
-            EntryTriple findEntry = newToCalamus.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+            EntryTriple findEntry = newToCalamus.getField(c.getName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
                 if (findEntry.getName().contains("f_")) {
                     return findEntry.getName();
@@ -175,7 +177,7 @@ public class GenState
         if (!newToOld.isEmpty()) {
             for (int i = 0; i < newToOld.size(); i++) {
                 //noinspection deprecation
-                EntryTriple findEntry = newToOld.get(i).getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+                EntryTriple findEntry = newToOld.get(i).getField(c.getName(), f.getName(), f.getDescriptor());
                 if (findEntry != null) {
                     findEntry = oldToCalamus.get(i).getField(findEntry);
                     if (findEntry != null) {
@@ -199,7 +201,7 @@ public class GenState
             return "";
         }
 
-        StringBuilder builder = new StringBuilder(classEntry.getFullyQualifiedName());
+        StringBuilder builder = new StringBuilder(classEntry.getName());
         List<String> strings = new ArrayList<>();
         String scs = getPropagation(storage, classEntry.getSuperClass(storage));
         if (!scs.isEmpty()) {
@@ -259,7 +261,7 @@ public class GenState
             //noinspection deprecation
             EntryTriple findEntry = null;
             if (newToCalamus != null) {
-                findEntry = newToCalamus.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                findEntry = newToCalamus.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                 }
@@ -267,7 +269,7 @@ public class GenState
 
             if (findEntry == null && !newToOld.isEmpty()) {
                 for (int i = 0; i < newToOld.size(); i++) {
-                    findEntry = newToOld.get(i).getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                    findEntry = newToOld.get(i).getMethod(cc.getName(), m.getName(), m.getDescriptor());
                     if (findEntry != null) {
                         //noinspection deprecation
                         EntryTriple newToOldEntry = findEntry;
@@ -282,7 +284,7 @@ public class GenState
                                 List<JarClassEntry> cccList = oldM.getMatchingEntries(storagesOld.get(i), oldBase);
                                 
                                 for (JarClassEntry ccc : cccList) {
-                                    findEntry = oldToCalamus.get(i).getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
+                                    findEntry = oldToCalamus.get(i).getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
                                     if (findEntry != null) {
                                         names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storagesOld.get(i), ccc) + suffix);
                                     }
@@ -445,23 +447,42 @@ public class GenState
     }
 
     private void addClass(BufferedWriter writer, JarClassEntry c, List<JarRootEntry> storagesOld, JarRootEntry storage, String translatedPrefix) throws IOException {
-        String className = c.getName();
-        String localName = stripLocalClassPrefix(className);
+        String fullName = c.getName();
         String cname = "";
-        translatedPrefix += className.substring(0, className.length() - localName.length());
+        String enclName = c.getEnclosingClassName();
+        String innerName = c.getInnerName();
+        if (c.hasEnclosingClass()) {
+            // Typically inner class names are of the form com/example/Example$InnerName
+            // but this is not required by the JVM spec! However, for the names we generate
+            // we do follow this convention.
+            // check if the obfuscated name follows the convention
+            if (fullName.startsWith(enclName + "$")) {
+                if (innerName == null) {
+                     // class is anonymous
+                } else {
+                     // class is inner or local
+                    if (fullName.endsWith(innerName)) {
+                        // local classes typically have a number prefix before the inner name
+                        translatedPrefix += fullName.substring(enclName.length() + 1, fullName.length() - innerName.length());
+                    }
+                }
+            }
+        }
         String prefixSaved = translatedPrefix;
 
-        if (this.obfuscatedPatterns.stream().noneMatch(p -> p.matcher(className).matches())) {
-            translatedPrefix = c.getFullyQualifiedName();
+        if (this.obfuscatedPatterns.stream().noneMatch(p -> p.matcher(fullName).matches())) {
+            translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
-                cname = localName;
+                cname = fullName.substring(enclName.length() + 1);
             } else {
                 cname = null;
 
                 if (newToCalamus != null) {
-                    String findName = newToCalamus.getClass(c.getFullyQualifiedName());
+                    String findName = newToCalamus.getClass(c.getName());
                     if (findName != null) {
+                        // the names we generate follow the standard convention for inner class names,
+                        // so we can safely find the inner name like this
                         String[] r = findName.split("\\$");
                         if (r.length > 1) {
                             cname = stripLocalClassPrefix(r[r.length - 1]);
@@ -472,10 +493,10 @@ public class GenState
                 }
 
                 if (cname == null && !newToOld.isEmpty()) {
-                    String fullName = c.getFullyQualifiedName();
                     for (int i = 0; i < newToOld.size(); i++) {
                         String findName = newToOld.get(i).getClass(fullName);
                         if (findName != null) {
+                            // similar to above, the names we generate follow the convention for inner classes
                             findName = oldToCalamus.get(i).getClass(findName);
                             if (findName != null) {
                                 String[] nr = fullName.split("\\$");
@@ -508,7 +529,7 @@ public class GenState
             }
         }
 
-        writer.write("CLASS\t" + c.getFullyQualifiedName() + "\t" + translatedPrefix + cname + "\n");
+        writer.write("CLASS\t" + c.getName() + "\t" + translatedPrefix + cname + "\n");
 
         for (JarFieldEntry f : c.getFields()) {
             String fName = getFieldName(c, f);
@@ -517,7 +538,7 @@ public class GenState
             }
 
             if (fName != null) {
-                writer.write("FIELD\t" + c.getFullyQualifiedName()
+                writer.write("FIELD\t" + c.getName()
                       + "\t" + f.getDescriptor()
                       + "\t" + f.getName()
                       + "\t" + fName + "\n");
@@ -533,7 +554,7 @@ public class GenState
             }
 
             if (mName != null) {
-                writer.write("METHOD\t" + c.getFullyQualifiedName()
+                writer.write("METHOD\t" + c.getName()
                       + "\t" + m.getDescriptor()
                       + "\t" + m.getName()
                       + "\t" + mName + "\n");

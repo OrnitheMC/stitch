@@ -17,8 +17,13 @@
 
 package net.fabricmc.stitch.representation;
 
+import java.nio.charset.StandardCharsets;
+
+import net.fabricmc.stitch.Main;
+
 public abstract class AbstractJarEntry
 {
+    byte[] hash = new byte[0];
     protected String name;
     protected String parentName;
     protected int access;
@@ -48,7 +53,16 @@ public abstract class AbstractJarEntry
         return name;
     }
 
-    public abstract byte[] getHash();
+    protected void hash(byte[] parentHash) {
+        Main.MESSAGE_DIGEST.reset();
+        Main.MESSAGE_DIGEST.update(parentHash);
+        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
+        hash = Main.MESSAGE_DIGEST.digest();
+    }
+
+    public byte[] getHash() {
+        return hash;
+    }
 
     @Override
     public boolean equals(Object other) {

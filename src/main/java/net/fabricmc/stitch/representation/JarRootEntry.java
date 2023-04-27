@@ -25,16 +25,14 @@ public class JarRootEntry extends AbstractJarEntry
 {
     final File file;
     final Map<String, JarClassEntry> classTree;
-    final List<JarClassEntry> allClasses;
-
-    byte[] jarHash = { };
+    final Map<String, JarClassEntry> allClasses;
 
     public JarRootEntry(File file) throws IOException {
         super(file.getName(), "");
 
         this.file = file;
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
-        this.allClasses = new ArrayList<>();
+        this.allClasses = new TreeMap<>(Comparator.naturalOrder());
     }
 
     public JarClassEntry getClass(String name, JarClassEntry.ClassEntryPopulator populator, boolean create) {
@@ -42,32 +40,14 @@ public class JarRootEntry extends AbstractJarEntry
             return null;
         }
 
-        JarClassEntry entry = null;
-
-        int i = name.lastIndexOf('$');
-        String simpleName = (i > 0) ? name.substring(i + 1) : name;
-
-        if (i > 0) {
-            String enclName = name.substring(0, i);
-            JarClassEntry ec = getClass(enclName, null, false);
-
-            if (ec != null) {
-                entry = ec.getInnerClass(simpleName);
-            } else {
-                i = -1;
-                simpleName = name;
-                entry = classTree.get(name);
-            }
-        } else {
-            entry = classTree.get(name);
-        }
+        JarClassEntry entry = allClasses.get(name);
 
         if (entry == null && create) {
-            entry = new JarClassEntry(simpleName, name, populator, this);
+            entry = new JarClassEntry(name, this);
 
-            allClasses.add(entry);
+            allClasses.put(name, entry);
 
-            if (i < 0) {
+            if (!populator.nested) {
                 classTree.put(name, entry);
             }
         }
@@ -80,11 +60,15 @@ public class JarRootEntry extends AbstractJarEntry
     }
 
     public Collection<JarClassEntry> getAllClasses() {
-        return Collections.unmodifiableList(allClasses);
+        return allClasses.values();
     }
 
     @Override
-    public byte[] getHash() {
-        return jarHash;
+    public void hash(byte[] salt) {
+        super.hash(salt);
+
+        for (JarClassEntry classEntry : allClasses.values()) {
+            classEntry.hash(hash);
+        }
     }
 }

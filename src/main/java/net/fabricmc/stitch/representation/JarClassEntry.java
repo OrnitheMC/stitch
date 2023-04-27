@@ -17,10 +17,8 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.util.Pair;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,46 +28,58 @@ public class JarClassEntry extends AbstractJarEntry
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
     final Map<String, Set<Pair<JarClassEntry, String>>> relatedMethods;
-    final String fullyQualifiedName;
-    final String signature;
-    final byte[] saltedClassHash;
+    String enclosingClass;
+    String enclosingMethodName;
+    String enclosingMethodDescriptor;
+    String innerName;
+    String signature;
     String superclass;
     List<String> interfaces;
     List<String> subclasses;
     List<String> implementers;
 
-    protected JarClassEntry(String name, String fullyQualifiedName, ClassEntryPopulator populator, JarRootEntry parentJar) {
+    protected JarClassEntry(String name, JarRootEntry parentJar) {
         super(name, "");
 
-        this.fullyQualifiedName = fullyQualifiedName;
         this.innerClasses = new TreeMap<>(Comparator.naturalOrder());
         this.fields = new TreeMap<>(Comparator.naturalOrder());
         this.methods = new TreeMap<>(Comparator.naturalOrder());
         this.relatedMethods = new HashMap<>();
 
-        this.setAccess(populator.access());
-        this.signature = populator.signature();
-        this.superclass = populator.superclass();
-        this.interfaces = Arrays.asList(populator.interfaces());
-
-        Main.MESSAGE_DIGEST.update(parentJar.getHash());
-        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
-        this.saltedClassHash = Main.MESSAGE_DIGEST.digest();
-
         this.subclasses = new ArrayList<>();
         this.implementers = new ArrayList<>();
+    }
+
+    protected void populate(ClassEntryPopulator populator) {
+        this.setAccess(populator.access);
+        if (populator.nested) {
+            this.enclosingClass = populator.enclosingClassName;
+            this.enclosingMethodName = populator.enclosingMethodName;
+            this.enclosingMethodDescriptor = populator.enclosingMethodDescriptor;
+            this.innerName = populator.innerName;
+        }
+        this.signature = populator.signature;
+        this.superclass = populator.superclass;
+        this.interfaces = Arrays.asList(populator.interfaces);
     }
 
     protected void populateParents(JarRootEntry storage) {
         JarClassEntry superEntry = getSuperClass(storage);
         if (superEntry != null) {
-            superEntry.subclasses.add(fullyQualifiedName);
+            superEntry.subclasses.add(name);
         }
 
         for (JarClassEntry itf : getInterfaces(storage)) {
             if (itf != null) {
-                itf.implementers.add(fullyQualifiedName);
+                itf.implementers.add(name);
             }
+        }
+    }
+
+    protected void populateInnerClasses(JarRootEntry storage) {
+        JarClassEntry enclosingEntry = getEnclosingClass(storage);
+        if (enclosingEntry != null) {
+            enclosingEntry.innerClasses.put(getKey(), this);
         }
     }
 
@@ -79,12 +89,32 @@ public class JarClassEntry extends AbstractJarEntry
         return relatedMethods.getOrDefault(m.getKey(), Collections.EMPTY_SET);
     }
 
-    public String getFullyQualifiedName() {
-        return fullyQualifiedName;
-    }
-
     public String getSignature() {
         return signature;
+    }
+
+    public String getEnclosingClassName() {
+        return enclosingClass;
+    }
+
+    public JarClassEntry getEnclosingClass(JarRootEntry storage) {
+        return hasEnclosingClass() ? storage.getClass(enclosingClass, null, false) : null;
+    }
+
+    public String getEnclosingMethodName() {
+        return enclosingMethodName;
+    }
+
+    public String getEnclosingMethodDescriptor() {
+        return enclosingMethodDescriptor;
+    }
+
+    public JarMethodEntry getEnclosingMethod(JarRootEntry storage) {
+        return hasEnclosingMethod() ? getEnclosingClass(storage).getMethod(enclosingMethodName + enclosingMethodDescriptor) : null;
+    }
+
+    public String getInnerName() {
+        return innerName;
     }
 
     public String getSuperClassName() {
@@ -104,8 +134,15 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     @Override
-    public byte[] getHash() {
-        return saltedClassHash;
+    public void hash(byte[] parentHash) {
+        super.hash(parentHash);
+
+        for (JarFieldEntry fieldEntry : fields.values()) {
+            fieldEntry.hash(hash);
+        }
+        for (JarMethodEntry methodEntry : methods.values()) {
+            methodEntry.hash(hash);
+        }
     }
 
     public List<String> getSubclassNames() {
@@ -163,49 +200,37 @@ public class JarClassEntry extends AbstractJarEntry
         return Access.isInterface(getAccess());
     }
 
-    public boolean isAnonymous() {
-        return getName().matches("\\d+");
+    public boolean hasEnclosingClass() {
+        return enclosingClass != null;
     }
 
-    @Override
-    public String getKey() {
-        return getFullyQualifiedName();
+    public boolean hasEnclosingMethod() {
+        return enclosingMethodName != null;
+    }
+
+    public boolean isAnonymous() {
+        return hasEnclosingClass() && innerName == null;
+    }
+
+    public boolean isInner() {
+        return hasEnclosingClass() && !hasEnclosingMethod() && innerName != null;
+    }
+
+    public boolean isLocal() {
+        return hasEnclosingMethod() && innerName != null;
     }
 
     public static final class ClassEntryPopulator
     {
-        private final int access;
-        private final String signature;
-        private final String superclass;
-        private final String[] interfaces;
-        private final byte[] bytecode;
-
-        public ClassEntryPopulator(int access, String signature, String superclass, String[] interfaces, byte[] bytecode) {
-            this.access = access;
-            this.signature = signature;
-            this.superclass = superclass;
-            this.interfaces = interfaces;
-            this.bytecode = bytecode;
-        }
-
-        public int access() {
-            return access;
-        }
-
-        public String signature() {
-            return signature;
-        }
-
-        public String superclass() {
-            return superclass;
-        }
-
-        public String[] interfaces() {
-            return interfaces;
-        }
-
-        public byte[] bytecode() {
-            return bytecode;
-        }
+        public int access;
+        public String name;
+        public boolean nested;
+        public String enclosingClassName;
+        public String enclosingMethodName;
+        public String enclosingMethodDescriptor;
+        public String innerName;
+        public String signature;
+        public String superclass;
+        public String[] interfaces;
     }
 }
