@@ -35,19 +35,19 @@ public class JarRootEntry extends AbstractJarEntry
         this.allClasses = new TreeMap<>(Comparator.naturalOrder());
     }
 
-    public JarClassEntry getClass(String name, JarClassEntry.ClassEntryPopulator populator, boolean create) {
+    public JarClassEntry getClass(String name, JarClassEntry.ClassEntryPopulator populator) {
         if (name == null) {
             return null;
         }
 
         JarClassEntry entry = allClasses.get(name);
 
-        if (entry == null && create) {
+        if (entry == null && populator != null) {
             entry = new JarClassEntry(name, this);
+            entry.populate(populator);
 
             allClasses.put(name, entry);
-
-            if (!populator.nested) {
+            if (!entry.hasDeclaringClass() && !entry.hasEnclosingClass()) {
                 classTree.put(name, entry);
             }
         }

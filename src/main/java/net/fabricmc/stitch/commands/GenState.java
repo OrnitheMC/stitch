@@ -278,7 +278,7 @@ public class GenState
                             names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                         } else {
                             // more involved...
-                            JarClassEntry oldBase = storagesOld.get(i).getClass(newToOldEntry.getOwner(), null, false);
+                            JarClassEntry oldBase = storagesOld.get(i).getClass(newToOldEntry.getOwner(), null);
                             if (oldBase != null) {
                                 JarMethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
                                 List<JarClassEntry> cccList = oldM.getMatchingEntries(storagesOld.get(i), oldBase);
@@ -449,23 +449,17 @@ public class GenState
     private void addClass(BufferedWriter writer, JarClassEntry c, List<JarRootEntry> storagesOld, JarRootEntry storage, String translatedPrefix) throws IOException {
         String fullName = c.getName();
         String cname = "";
-        String enclName = c.getEnclosingClassName();
-        String innerName = c.getInnerName();
-        if (c.hasEnclosingClass()) {
-            // Typically inner class names are of the form com/example/Example$InnerName
-            // but this is not required by the JVM spec! However, for the names we generate
-            // we do follow this convention.
-            // check if the obfuscated name follows the convention
-            if (fullName.startsWith(enclName + "$")) {
-                if (innerName == null) {
-                     // class is anonymous
-                } else {
-                     // class is inner or local
-                    if (fullName.endsWith(innerName)) {
-                        // local classes typically have a number prefix before the inner name
-                        translatedPrefix += fullName.substring(enclName.length() + 1, fullName.length() - innerName.length());
-                    }
-                }
+        // Typically inner class names are of the form com/example/Example$InnerName
+        // but this is not required by the JVM spec! However, for the names we generate
+        // we do follow this convention.
+        if (c.isLocal()) {
+            String enclName = c.getEnclosingClassName();
+            String innerName = c.getInnerName();
+            // typically, local classes' full names have a number prefix
+            // before the inner name part - this is useful for allowing
+            // multiple local classes to have the same inner name, so we add it
+            if (fullName.startsWith(enclName + "$") && fullName.endsWith(innerName)) {
+                translatedPrefix += fullName.substring(enclName.length() + 1, fullName.length() - innerName.length());
             }
         }
         String prefixSaved = translatedPrefix;
@@ -474,12 +468,20 @@ public class GenState
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
-                cname = fullName.substring(enclName.length() + 1);
+                if (c.isAnonymous()) {
+                    // anonymous classes are only unmapped if their name
+                    // follows the standard $ convention
+                    cname = fullName.substring(c.getEnclosingClassName().length() + 1);
+                } else {
+                    // throw exception in case the impl of isMappedClass
+                    // changes but we forget to deal with it here
+                    throw new IllegalStateException("don't know what to do with class " + fullName);
+                }
             } else {
                 cname = null;
 
                 if (newToCalamus != null) {
-                    String findName = newToCalamus.getClass(c.getName());
+                    String findName = newToCalamus.getClass(fullName);
                     if (findName != null) {
                         // the names we generate follow the standard convention for inner class names,
                         // so we can safely find the inner name like this
@@ -538,7 +540,7 @@ public class GenState
             }
 
             if (fName != null) {
-                writer.write("FIELD\t" + c.getName()
+                writer.write("FIELD\t" + fullName
                       + "\t" + f.getDescriptor()
                       + "\t" + f.getName()
                       + "\t" + fName + "\n");
@@ -554,7 +556,7 @@ public class GenState
             }
 
             if (mName != null) {
-                writer.write("METHOD\t" + c.getName()
+                writer.write("METHOD\t" + fullName
                       + "\t" + m.getDescriptor()
                       + "\t" + m.getName()
                       + "\t" + mName + "\n");

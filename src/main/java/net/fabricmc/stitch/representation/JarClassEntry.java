@@ -28,6 +28,9 @@ public class JarClassEntry extends AbstractJarEntry
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
     final Map<String, Set<Pair<JarClassEntry, String>>> relatedMethods;
+    /** outer class for inner classes */
+    String declaringClass;
+    /** outer class for anonymous and local classes */
     String enclosingClass;
     String enclosingMethodName;
     String enclosingMethodDescriptor;
@@ -53,6 +56,7 @@ public class JarClassEntry extends AbstractJarEntry
     protected void populate(ClassEntryPopulator populator) {
         this.setAccess(populator.access);
         if (populator.nested) {
+            this.declaringClass = populator.declaringClassName;
             this.enclosingClass = populator.enclosingClassName;
             this.enclosingMethodName = populator.enclosingMethodName;
             this.enclosingMethodDescriptor = populator.enclosingMethodDescriptor;
@@ -77,9 +81,13 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     protected void populateInnerClasses(JarRootEntry storage) {
+        JarClassEntry declaringEntry = getDeclaringClass(storage);
+        if (declaringEntry != null) {
+            declaringEntry.innerClasses.put(name, this);
+        }
         JarClassEntry enclosingEntry = getEnclosingClass(storage);
         if (enclosingEntry != null) {
-            enclosingEntry.innerClasses.put(getKey(), this);
+            enclosingEntry.innerClasses.put(name, this);
         }
     }
 
@@ -93,12 +101,20 @@ public class JarClassEntry extends AbstractJarEntry
         return signature;
     }
 
+    public String getDeclaringClassName() {
+        return declaringClass;
+    }
+
+    public JarClassEntry getDeclaringClass(JarRootEntry storage) {
+        return hasDeclaringClass() ? storage.getClass(declaringClass, null) : null;
+    }
+
     public String getEnclosingClassName() {
         return enclosingClass;
     }
 
     public JarClassEntry getEnclosingClass(JarRootEntry storage) {
-        return hasEnclosingClass() ? storage.getClass(enclosingClass, null, false) : null;
+        return hasEnclosingClass() ? storage.getClass(enclosingClass, null) : null;
     }
 
     public String getEnclosingMethodName() {
@@ -110,7 +126,7 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     public JarMethodEntry getEnclosingMethod(JarRootEntry storage) {
-        return hasEnclosingMethod() ? getEnclosingClass(storage).getMethod(enclosingMethodName + enclosingMethodDescriptor) : null;
+        return hasEnclosingClass() && hasEnclosingMethod() ? getEnclosingClass(storage).getMethod(enclosingMethodName + enclosingMethodDescriptor) : null;
     }
 
     public String getInnerName() {
@@ -122,7 +138,7 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     public JarClassEntry getSuperClass(JarRootEntry storage) {
-        return storage.getClass(superclass, null, false);
+        return storage.getClass(superclass, null);
     }
 
     public List<String> getInterfaceNames() {
@@ -167,7 +183,7 @@ public class JarClassEntry extends AbstractJarEntry
         }
 
         return stringList.stream()
-              .map((s) -> storage.getClass(s, null, false))
+              .map((s) -> storage.getClass(s, null))
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
     }
@@ -200,6 +216,10 @@ public class JarClassEntry extends AbstractJarEntry
         return Access.isInterface(getAccess());
     }
 
+    public boolean hasDeclaringClass() {
+        return declaringClass != null;
+    }
+
     public boolean hasEnclosingClass() {
         return enclosingClass != null;
     }
@@ -213,11 +233,11 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     public boolean isInner() {
-        return hasEnclosingClass() && !hasEnclosingMethod() && innerName != null;
+        return hasDeclaringClass() && innerName != null;
     }
 
     public boolean isLocal() {
-        return hasEnclosingMethod() && innerName != null;
+        return hasEnclosingClass() && innerName != null;
     }
 
     public static final class ClassEntryPopulator
@@ -225,6 +245,7 @@ public class JarClassEntry extends AbstractJarEntry
         public int access;
         public String name;
         public boolean nested;
+        public String declaringClassName;
         public String enclosingClassName;
         public String enclosingMethodName;
         public String enclosingMethodDescriptor;

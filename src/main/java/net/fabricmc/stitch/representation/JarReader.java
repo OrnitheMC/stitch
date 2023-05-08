@@ -113,6 +113,7 @@ public class JarReader
                                                     final int access) {
                             if (populator.name.equals(name)) {
                                 populator.nested = true; 
+                                populator.declaringClassName = outerName;
                                 populator.innerName = innerName;
                             }
 
@@ -121,10 +122,10 @@ public class JarReader
 
                         @Override
                         public void visitEnd() {
-                            JarClassEntry classEntry = jar.getClass(populator.name, populator, true);
+                            JarClassEntry classEntry = jar.getClass(populator.name, populator);
 
                             long timeSpan = (System.nanoTime() - startedAt) / 1000;
-                            System.err.println("Loaded " + populator + " in " + timeSpan + "μs");
+                            System.err.println("Loaded " + classEntry + " in " + timeSpan + "μs");
 
                             super.visitEnd();
                         }
