@@ -124,8 +124,15 @@ public class JarReader
                         public void visitEnd() {
                             JarClassEntry classEntry = jar.getClass(populator.name, populator);
 
+                            for (JarFieldEntry fieldEntry : fields) {
+                                classEntry.fields.put(fieldEntry.getKey(), fieldEntry);
+                            }
+                            for (JarMethodEntry methodEntry : methods) {
+                                classEntry.methods.put(methodEntry.getKey(), methodEntry);
+                            }
+
                             long timeSpan = (System.nanoTime() - startedAt) / 1000;
-                            System.err.println("Loaded " + classEntry + " in " + timeSpan + "μs");
+                            System.err.println("Loaded " + classEntry.getKey() + " in " + timeSpan + "μs");
 
                             super.visitEnd();
                         }
