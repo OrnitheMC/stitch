@@ -70,6 +70,14 @@ public class GenState
         return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_')) && name.charAt(0) != '<';
     }
 
+    public boolean isObfuscated(JarClassEntry c) {
+        return isObfuscated(c.getName());
+    }
+
+    public boolean isObfuscated(String name) {
+        return this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(name).matches());
+    }
+
     public void setWriteAll() {
     }
 
@@ -142,13 +150,13 @@ public class GenState
     }
 
     private String getTargetPackage(JarClassEntry c) {
-        String name = c.getName();
-        int idx = name.lastIndexOf('/');
+        String packageName = c.getPackageName();
 
-        if (idx > 0) {
+        if (!packageName.isEmpty() && !(isObfuscated(c) && c.getSiblings().stream().allMatch(p -> isObfuscated(p)))) {
             // class is not in default package (i.e. no package)
             // so to avoid illegal access errors keep it there
-            return name.substring(0, idx + 1);
+            // if there is an unobfuscated class in that package
+            return packageName;
         }
 
         return this.defaultPackage;
@@ -464,7 +472,7 @@ public class GenState
         }
         String prefixSaved = translatedPrefix;
 
-        if (this.obfuscatedPatterns.stream().noneMatch(p -> p.matcher(fullName).matches())) {
+        if (!isObfuscated(fullName)) {
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {

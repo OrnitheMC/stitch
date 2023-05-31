@@ -152,7 +152,11 @@ public class JarReader
         this.jar.getAllClasses().forEach((c) -> c.populateInnerClasses(jar));
         System.err.println("Populated inner class entries.");
 
-        // Stage 4: hashing
+        // Stage 4: find classes in the same package
+        this.jar.getClasses().forEach((c) -> c.populateSiblings(jar));
+        System.err.println("Populated sibling class entries.");
+
+        // Stage 5: hashing
         this.jar.hash(salt);
         System.err.println("Hashed jar entries.");
 
