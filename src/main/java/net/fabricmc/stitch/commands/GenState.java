@@ -143,23 +143,10 @@ public class GenState
                 writer.write(String.format("v1\tofficial\t%s\n", targetNamespace));
 
                 for (JarClassEntry c : jarEntry.getClasses()) {
-                    addClass(writer, c, jarsOld, jarEntry, getTargetPackage(c));
+                    addClass(writer, c, jarsOld, jarEntry, this.defaultPackage);
                 }
             }
         }
-    }
-
-    private String getTargetPackage(JarClassEntry c) {
-        String packageName = c.getPackageName();
-
-        if (!packageName.isEmpty() && !(isObfuscated(c) && c.getSiblings().stream().allMatch(p -> isObfuscated(p)))) {
-            // class is not in default package (i.e. no package)
-            // so to avoid illegal access errors keep it there
-            // if there is an unobfuscated class in that package
-            return packageName;
-        }
-
-        return this.defaultPackage;
     }
 
     @Nullable
