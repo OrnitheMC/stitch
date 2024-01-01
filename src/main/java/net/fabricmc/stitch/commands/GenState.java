@@ -59,7 +59,7 @@ public class GenState
     }
 
     public static boolean isUnmappedFieldName(String name) {
-        return name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_');
+        return true; // make sure even unobfuscated fields are given names
     }
 
     public static boolean isMappedMethod(JarRootEntry storage, JarClassEntry c, JarMethodEntry m) {
@@ -67,7 +67,7 @@ public class GenState
     }
 
     public static boolean isUnmappedMethodName(String name) {
-        return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_')) && name.charAt(0) != '<';
+        return name.charAt(0) != '<'; // make sure even unobfuscated methods are given names
     }
 
     public boolean isObfuscated(JarClassEntry c) {
