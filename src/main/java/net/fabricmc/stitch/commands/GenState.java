@@ -460,7 +460,18 @@ public class GenState
         String prefixSaved = translatedPrefix;
 
         if (!isObfuscated(fullName)) {
-            translatedPrefix = fullName;
+            if (c.isInner() || c.isLocal()) {
+                // for local classes the extra prefix part has already been added
+                cname = c.getInnerName();
+            } else if (c.isAnonymous()) {
+                if (isMappedClass(c)) {
+                    throw new IllegalStateException("don't know how to handle unobfuscated class " + fullName);
+                } else {
+                    cname = fullName.substring(c.getEnclosingClassName().length() + 1);
+                }
+            } else {
+                cname = stripPackageName(fullName);
+            }
         } else {
             if (!isMappedClass(c)) {
                 if (c.isAnonymous()) {
