@@ -471,6 +471,17 @@ public class GenState
                 }
             } else {
                 cname = stripPackageName(fullName);
+                if ("Main".equals(cname)) {
+                    // in some versions there are multiple Main classes
+                    // so we prefix part of the package name
+                    String packageName = c.getPackageName();
+                    String nm = "net/minecraft/";
+                    if (packageName.startsWith(nm) && packageName.length() > nm.length()) {
+                        String prefix = packageName.substring(nm.length(), packageName.length() - 1);
+                        prefix = prefix.substring(0, 1).toUpperCase() + prefix.substring(1, prefix.length());
+                        cname = prefix + cname;
+                    }
+                }
             }
         } else {
             if (!isMappedClass(c)) {
