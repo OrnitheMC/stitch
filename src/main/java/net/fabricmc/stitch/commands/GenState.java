@@ -476,8 +476,14 @@ public class GenState
                     // so we prefix part of the package name
                     String packageName = c.getPackageName();
                     String nm = "net/minecraft/";
+                    String main = "/main/";
                     if (packageName.startsWith(nm) && packageName.length() > nm.length()) {
-                        String prefix = packageName.substring(nm.length(), packageName.length() - 1);
+                        String prefix;
+                        if (packageName.endsWith(main)) {
+                            prefix = packageName.substring(nm.length(), packageName.length() - main.length());
+                        } else {
+                            prefix = packageName.substring(nm.length(), packageName.length() - 1);
+                        }
                         prefix = prefix.substring(0, 1).toUpperCase() + prefix.substring(1, prefix.length());
                         cname = prefix + cname;
                     }
