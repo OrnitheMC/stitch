@@ -541,13 +541,6 @@ public class GenState
                     }
                 }
 
-                if (cname != null && !cname.contains("C_")) {
-                    String newName = next(c, "C");
-                    System.out.println(cname + " is now " + newName);
-                    cname = newName;
-                    translatedPrefix = prefixSaved;
-                }
-
                 if (cname == null) {
                     cname = next(c, "C");
                 }
