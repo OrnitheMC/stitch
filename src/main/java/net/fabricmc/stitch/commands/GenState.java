@@ -169,23 +169,47 @@ public class GenState
             }
         }
 
-        if (!newToOld.isEmpty()) {
-            for (int i = 0; i < newToOld.size(); i++) {
-                //noinspection deprecation
-                EntryTriple findEntry = newToOld.get(i).getField(c.getName(), f.getName(), f.getDescriptor());
+        List<String> foundNames = new ArrayList<>();
+
+        for (int i = 0; i < newToOld.size(); i++) {
+            //noinspection deprecation
+            EntryTriple findEntry = newToOld.get(i).getField(c.getName(), f.getName(), f.getDescriptor());
+            if (findEntry != null) {
+                findEntry = oldToCalamus.get(i).getField(findEntry);
                 if (findEntry != null) {
-                    findEntry = oldToCalamus.get(i).getField(findEntry);
-                    if (findEntry != null) {
-                        if (findEntry.getName().contains("f_")) {
-                            return findEntry.getName();
-                        } else {
-                            String newName = next(f, "f");
-                            System.out.println(findEntry.getName() + " is now " + newName);
-                            return newName;
-                        }
+                    if (findEntry.getName().contains("f_")) {
+                        foundNames.add(findEntry.getName());
+                        continue;
+                    } else {
+                        String newName = next(f, "f");
+                        System.out.println(findEntry.getName() + " is now " + newName);
+                        foundNames.add(newName);
+                        continue;
                     }
                 }
             }
+            // should only be reached if no name
+            // is inherited from this prev jar
+            foundNames.add(null);
+        }
+
+        String inheritedName = null;
+
+        for (int i = 0; i < foundNames.size(); i++) {
+            String foundName = foundNames.get(i);
+
+            if (foundName == null) {
+                continue;
+            }
+            if (inheritedName != null && !foundName.equals(inheritedName)) {
+                throw new IllegalStateException(i + ") inherited multiple names (" + inheritedName + ", " + foundName + ")!");
+            }
+
+            inheritedName = foundName;
+        }
+
+        if (inheritedName != null) {
+            return inheritedName;
         }
 
         return next(f, "f");
@@ -233,13 +257,13 @@ public class GenState
         return builder.toString();
     }
 
-    private Set<JarMethodEntry> findNames(List<JarRootEntry> storagesOld, JarRootEntry storageNew, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names) {
+    private Set<JarMethodEntry> findNames(int i, JarRootEntry storageOld, JarRootEntry storageNew, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names) {
         Set<JarMethodEntry> allEntries = new HashSet<>();
-        findNames(storagesOld, storageNew, c, m, names, allEntries);
+        findNames(i, storageOld, storageNew, c, m, names, allEntries);
         return allEntries;
     }
 
-    private void findNames(List<JarRootEntry> storagesOld, JarRootEntry storageNew, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
+    private void findNames(int i, JarRootEntry storageOld, JarRootEntry storageNew, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
         if (!usedMethods.add(m)) {
             return;
         }
@@ -263,26 +287,24 @@ public class GenState
             }
 
             if (findEntry == null && !newToOld.isEmpty()) {
-                for (int i = 0; i < newToOld.size(); i++) {
-                    findEntry = newToOld.get(i).getMethod(cc.getName(), m.getName(), m.getDescriptor());
+                findEntry = newToOld.get(i).getMethod(cc.getName(), m.getName(), m.getDescriptor());
+                if (findEntry != null) {
+                    //noinspection deprecation
+                    EntryTriple newToOldEntry = findEntry;
+                    findEntry = oldToCalamus.get(i).getMethod(newToOldEntry);
                     if (findEntry != null) {
-                        //noinspection deprecation
-                        EntryTriple newToOldEntry = findEntry;
-                        findEntry = oldToCalamus.get(i).getMethod(newToOldEntry);
-                        if (findEntry != null) {
-                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
-                        } else {
-                            // more involved...
-                            JarClassEntry oldBase = storagesOld.get(i).getClass(newToOldEntry.getOwner(), null);
-                            if (oldBase != null) {
-                                JarMethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
-                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storagesOld.get(i), oldBase);
-                                
-                                for (JarClassEntry ccc : cccList) {
-                                    findEntry = oldToCalamus.get(i).getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
-                                    if (findEntry != null) {
-                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storagesOld.get(i), ccc) + suffix);
-                                    }
+                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
+                    } else {
+                        // more involved...
+                        JarClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), null);
+                        if (oldBase != null) {
+                            JarMethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
+                            List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                            
+                            for (JarClassEntry ccc : cccList) {
+                                findEntry = oldToCalamus.get(i).getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
+                                if (findEntry != null) {
+                                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
                                 }
                             }
                         }
@@ -293,7 +315,7 @@ public class GenState
 
         for (JarClassEntry mc : ccList) {
             for (Pair<JarClassEntry, String> pair : mc.getRelatedMethods(m)) {
-                findNames(storagesOld, storageNew, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), names, usedMethods);
+                findNames(i, storageOld, storageNew, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), names, usedMethods);
             }
         }
     }
@@ -309,59 +331,90 @@ public class GenState
         }
 
         if (!newToOld.isEmpty() || newToCalamus != null) {
-            Map<String, Set<String>> names = new HashMap<>();
-            Set<JarMethodEntry> allEntries = findNames(storagesOld, storageNew, c, m, names);
-            for (JarMethodEntry mm : allEntries) {
-                if (methodNames.containsKey(mm)) {
-                    return methodNames.get(mm);
+            List<String> foundNames = new ArrayList<>();
+
+            oldJarLoop:
+            for (int i = 0; i < storagesOld.size(); i++) {
+                Map<String, Set<String>> names = new HashMap<>();
+                Set<JarMethodEntry> allEntries = findNames(i, storagesOld.get(i), storageNew, c, m, names);
+                for (JarMethodEntry mm : allEntries) {
+                    if (methodNames.containsKey(mm)) {
+                        foundNames.add(methodNames.get(mm));
+                        continue oldJarLoop;
+                    }
                 }
+
+                if (names.size() > 1) {
+                    System.out.println(i + ") Conflict detected - matched same target name!");
+                    List<String> nameList = new ArrayList<>(names.keySet());
+                    Collections.sort(nameList);
+
+                    for (int ni = 0; ni < nameList.size(); ni++) {
+                        String s = nameList.get(ni);
+                        System.out.println((ni + 1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
+                    }
+
+                    boolean interactive = true;
+                    if (!interactive) {
+                        throw new RuntimeException("Conflict detected!");
+                    }
+
+                    while (true) {
+                        String cmd = scanner.nextLine();
+                        int chosen;
+                        try {
+                            chosen = Integer.parseInt(cmd);
+                        } catch (NumberFormatException e) {
+                            e.printStackTrace();
+                            continue;
+                        }
+
+                        if (chosen >= 1 && chosen <= nameList.size()) {
+                            for (JarMethodEntry mm : allEntries) {
+                                methodNames.put(mm, nameList.get(chosen - 1));
+                            }
+                            System.out.println("OK!");
+                            foundNames.add(nameList.get(chosen - 1));
+                            continue oldJarLoop;
+                        }
+                    }
+                } else if (names.size() == 1) {
+                    String s = names.keySet().iterator().next();
+                    for (JarMethodEntry mm : allEntries) {
+                        methodNames.put(mm, s);
+                    }
+                    if (s.contains("m_")) {
+                        foundNames.add(s);
+                        continue oldJarLoop;
+                    } else {
+                        String newName = nextMethodName(storageNew, c, m);
+                        System.out.println(s + " is now " + newName);
+                        foundNames.add(newName);
+                        continue oldJarLoop;
+                    }
+                }
+
+                throw new IllegalStateException(i + ") haven't found a name for " + m + "!");
             }
 
-            if (names.size() > 1) {
-                System.out.println("Conflict detected - matched same target name!");
-                List<String> nameList = new ArrayList<>(names.keySet());
-                Collections.sort(nameList);
+            String name = null;
 
-                for (int i = 0; i < nameList.size(); i++) {
-                    String s = nameList.get(i);
-                    System.out.println((i + 1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
+            for (int i = 0; i < foundNames.size(); i++) {
+                String foundName = foundNames.get(i);
+
+                // this shouldn't ever happen - no reason to crash though
+                if (foundName == null) {
+                    continue;
                 }
-
-                boolean interactive = true;
-                if (!interactive) {
-                    throw new RuntimeException("Conflict detected!");
+                if (name != null && !foundName.equals(name)) {
+                    throw new IllegalStateException(i + ") inherited multiple names (" + name + ", " + foundName + ")!");
                 }
 
-                while (true) {
-                    String cmd = scanner.nextLine();
-                    int i;
-                    try {
-                        i = Integer.parseInt(cmd);
-                    } catch (NumberFormatException e) {
-                        e.printStackTrace();
-                        continue;
-                    }
+                name = foundName;
+            }
 
-                    if (i >= 1 && i <= nameList.size()) {
-                        for (JarMethodEntry mm : allEntries) {
-                            methodNames.put(mm, nameList.get(i - 1));
-                        }
-                        System.out.println("OK!");
-                        return nameList.get(i - 1);
-                    }
-                }
-            } else if (names.size() == 1) {
-                String s = names.keySet().iterator().next();
-                for (JarMethodEntry mm : allEntries) {
-                    methodNames.put(mm, s);
-                }
-                if (s.contains("m_")) {
-                    return s;
-                } else {
-                    String newName = nextMethodName(storageNew, c, m);
-                    System.out.println(s + " is now " + newName);
-                    return newName;
-                }
+            if (name != null) {
+                return name;
             }
         }
 
@@ -517,7 +570,10 @@ public class GenState
                     }
                 }
 
-                if (cname == null && !newToOld.isEmpty()) {
+                if (cname == null) {
+                    List<String> foundNames = new ArrayList<>();
+
+                    newToOldLoop:
                     for (int i = 0; i < newToOld.size(); i++) {
                         String findName = newToOld.get(i).getClass(fullName);
                         if (findName != null) {
@@ -528,16 +584,32 @@ public class GenState
                                 String[] or = findName.split("\\$");
                                 if (or.length == nr.length) {
                                     if (nr.length > 1) {
-                                        cname = stripLocalClassPrefix(or[or.length - 1]);
+                                        foundNames.add(stripLocalClassPrefix(or[or.length - 1]));
                                     } else {
-                                        cname = stripPackageName(findName);
+                                        foundNames.add(stripPackageName(findName));
                                     }
-                                    break;
+                                    continue newToOldLoop;
                                 } else {
                                     // nesting level changed; matching name is not necessary
                                 }
                             }
                         }
+                        // should only be reached if no name
+                        // is inherited from this prev jar
+                        foundNames.add(null);
+                    }
+
+                    for (int i = 0; i < foundNames.size(); i++) {
+                        String foundName = foundNames.get(i);
+
+                        if (foundName == null) {
+                            continue;
+                        }
+                        if (cname != null && !foundName.equals(cname)) {
+                            throw new IllegalStateException(i + ") inherited multiple names (" + cname + ", " + foundName + ")!");
+                        }
+
+                        cname = foundName;
                     }
                 }
 
