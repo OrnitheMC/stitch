@@ -513,35 +513,7 @@ public class GenState
         String prefixSaved = translatedPrefix;
 
         if (!isObfuscated(fullName)) {
-            if (c.isInner() || c.isLocal()) {
-                // for local classes the extra prefix part has already been added
-                cname = c.getInnerName();
-            } else if (c.isAnonymous()) {
-                if (isMappedClass(c)) {
-                    throw new IllegalStateException("don't know how to handle unobfuscated class " + fullName);
-                } else {
-                    cname = fullName.substring(c.getEnclosingClassName().length() + 1);
-                }
-            } else {
-                cname = stripPackageName(fullName);
-                if ("Main".equals(cname)) {
-                    // in some versions there are multiple Main classes
-                    // so we prefix part of the package name
-                    String packageName = c.getPackageName();
-                    String nm = "net/minecraft/";
-                    String main = "/main/";
-                    if (packageName.startsWith(nm) && packageName.length() > nm.length()) {
-                        String prefix;
-                        if (packageName.endsWith(main)) {
-                            prefix = packageName.substring(nm.length(), packageName.length() - main.length());
-                        } else {
-                            prefix = packageName.substring(nm.length(), packageName.length() - 1);
-                        }
-                        prefix = prefix.substring(0, 1).toUpperCase() + prefix.substring(1, prefix.length());
-                        cname = prefix + cname;
-                    }
-                }
-            }
+            translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
                 if (c.isAnonymous()) {
