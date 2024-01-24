@@ -18,6 +18,7 @@
 package net.fabricmc.stitch;
 
 import net.fabricmc.stitch.commands.*;
+import net.fabricmc.stitch.commands.tinyv2.CommandCombineTinyV2;
 import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
 import net.fabricmc.stitch.commands.tinyv2.CommandProposeV2FieldNames;
 import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
@@ -43,12 +44,14 @@ public class Main
         addCommand(new CommandGenerateCalamus());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
+        addCommand(new CommandCombineTiny());
         addCommand(new CommandProposeFieldNames());
         addCommand(new CommandReorderTiny());
         addCommand(new CommandRewriteCalamus());
         addCommand(new CommandUpdateCalamus());
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
+        addCommand(new CommandCombineTinyV2());
         addCommand(new CommandProposeV2FieldNames());
     }
 
