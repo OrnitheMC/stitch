@@ -63,11 +63,11 @@ public class GenState
     }
 
     public static boolean isMappedMethod(JarRootEntry storage, JarClassEntry c, JarMethodEntry m) {
-        return isUnmappedMethodName(m.getName()) && m.isSource(storage, c);
+        return isMappedMethodName(m.getName()) && m.isSource(storage, c);
     }
 
-    public static boolean isUnmappedMethodName(String name) {
-        return name.charAt(0) != '<'; // make sure even unobfuscated methods are given names
+    public static boolean isMappedMethodName(String name) {
+        return name.charAt(0) != '<' && !"main".equals(name); // make sure only constructors and main methods are not remapped
     }
 
     public boolean isObfuscated(JarClassEntry c) {
