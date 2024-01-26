@@ -662,7 +662,7 @@ public class GenState
         this.newToOld.add(newToOld);
     }
 
-    public void prepareUpdate(List<File> oldMappings, List<File> matches) throws IOException {
+    public void prepareUpdate(List<File> oldMappings, List<File> matches, boolean[] invertMatches) throws IOException {
         this.oldToIntermediary.clear();
         this.newToOld.clear();
 
@@ -681,7 +681,7 @@ public class GenState
 
             try (FileReader fileReader = new FileReader(matches.get(i))) {
                 try (BufferedReader reader = new BufferedReader(fileReader)) {
-                    MatcherUtil.read(reader, true, newToOld::addClass, newToOld::addField, newToOld::addMethod);
+                    MatcherUtil.read(reader, !invertMatches[i], newToOld::addClass, newToOld::addField, newToOld::addMethod);
                 }
             }
 

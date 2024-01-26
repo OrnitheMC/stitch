@@ -32,6 +32,15 @@ public class IntermediaryUtil
     }
 
     public static void updateIntermediary(List<File> oldJarFiles, File newJarFile, List<File> oldIntermediaryFiles, File newIntermediaryFile, List<File> matchesFiles, String[] options) throws IOException {
+        boolean[] invertMatches = new boolean[matchesFiles.size()];
+        for (int i = 0; i < matchesFiles.size(); i++) {
+            invertMatches[i] = false;
+        }
+
+        updateIntermediary(oldJarFiles, newJarFile, oldIntermediaryFiles, newIntermediaryFile, matchesFiles, invertMatches, options);
+    }
+
+    public static void updateIntermediary(List<File> oldJarFiles, File newJarFile, List<File> oldIntermediaryFiles, File newIntermediaryFile, List<File> matchesFiles, boolean[] invertMatches, String[] options) throws IOException {
         Args args = parseOptions(options);
 
         args.oldJarFiles = oldJarFiles;
@@ -39,6 +48,7 @@ public class IntermediaryUtil
         args.oldIntermediaryFiles = oldIntermediaryFiles;
         args.newIntermediaryFile = newIntermediaryFile;
         args.matchesFiles = matchesFiles;
+        args.invertMatches = invertMatches;
 
         updateIntermediary(args);
     }
@@ -89,7 +99,7 @@ public class IntermediaryUtil
 
         if (!args.oldIntermediaryFiles.isEmpty()) {
             System.err.println("Loading remapping files...");
-            state.prepareUpdate(args.oldIntermediaryFiles, args.matchesFiles);
+            state.prepareUpdate(args.oldIntermediaryFiles, args.matchesFiles, args.invertMatches);
         }
 
         System.err.println("Generating new mappings...");
@@ -132,7 +142,16 @@ public class IntermediaryUtil
             }
         }
 
-        oldFilesCount /= 3;
+        // after all the files is the invert matches booleans
+        // first check if they are present, since they are optional
+        String lastArg = rawArgs[oldFilesCount - 1];
+
+        if ("true".equals(lastArg) || "false".equals(lastArg)) {
+            oldFilesCount /= 4;
+        } else {
+            oldFilesCount /= 3;
+        }
+
         int index = 0;
 
         for (int i = 0; i < oldFilesCount; i++) {
@@ -145,6 +164,12 @@ public class IntermediaryUtil
         args.newIntermediaryFile = new File(rawArgs[index++]);
         for (int i = 0; i < oldFilesCount; i++) {
             args.matchesFiles.add(new File(rawArgs[index++]));
+        }
+        if (index < oldFilesCount) {
+            args.invertMatches = new boolean[args.matchesFiles.size()];
+            for (int i = 0; i < oldFilesCount; i++) {
+                args.invertMatches[i] = Boolean.parseBoolean(rawArgs[index++]);
+            }
         }
 
         return args;
@@ -172,6 +197,7 @@ public class IntermediaryUtil
         private List<File> oldIntermediaryFiles = new ArrayList<>();
         private File newIntermediaryFile;
         private List<File> matchesFiles = new ArrayList<>();
+        private boolean[] invertMatches;
 
         private String defaultPackage;
         private String targetNamespace;

@@ -27,7 +27,7 @@ public class CommandUpdateIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<old-jars>... <new-jar> <old-mapping-files>... <new-mapping-file> <match-files>... [--default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]";
+        return "<old-jars>... <new-jar> <old-mapping-files>... <new-mapping-file> <match-files>... [<invert matches>... --default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]";
     }
 
     @Override
