@@ -12,38 +12,38 @@ import net.fabricmc.stitch.commands.GenState;
 import net.fabricmc.stitch.representation.JarReader;
 import net.fabricmc.stitch.representation.JarRootEntry;
 
-public class CalamusUtil
+public class IntermediaryUtil
 {
-    public static void generateCalamus(File jarFile, File calamusFile, String[] options) throws IOException {
+    public static void generateIntermediary(File jarFile, File intermediaryFile, String[] options) throws IOException {
         Args args = parseOptions(options);
 
         args.newJarFile = jarFile;
-        args.newCalamusFile = calamusFile;
+        args.newIntermediaryFile = intermediaryFile;
 
-        generateCalamus(args);
+        generateIntermediary(args);
     }
 
-    public static void generateCalamus(Args args) throws IOException {
+    public static void generateIntermediary(Args args) throws IOException {
         args.oldJarFiles.clear();
-        args.oldCalamusFiles.clear();
+        args.oldIntermediaryFiles.clear();
         args.matchesFiles.clear();
 
-        updateCalamus(args);
+        updateIntermediary(args);
     }
 
-    public static void updateCalamus(List<File> oldJarFiles, File newJarFile, List<File> oldCalamusFiles, File newCalamusFile, List<File> matchesFiles, String[] options) throws IOException {
+    public static void updateIntermediary(List<File> oldJarFiles, File newJarFile, List<File> oldIntermediaryFiles, File newIntermediaryFile, List<File> matchesFiles, String[] options) throws IOException {
         Args args = parseOptions(options);
 
         args.oldJarFiles = oldJarFiles;
         args.newJarFile = newJarFile;
-        args.oldCalamusFiles = oldCalamusFiles;
-        args.newCalamusFile = newCalamusFile;
+        args.oldIntermediaryFiles = oldIntermediaryFiles;
+        args.newIntermediaryFile = newIntermediaryFile;
         args.matchesFiles = matchesFiles;
 
-        updateCalamus(args);
+        updateIntermediary(args);
     }
 
-    public static void updateCalamus(Args args) throws IOException {
+    public static void updateIntermediary(Args args) throws IOException {
         GenState state = new GenState();
 
         if (args.defaultPackage != null) {
@@ -87,13 +87,13 @@ public class CalamusUtil
             e.printStackTrace();
         }
 
-        if (!args.oldCalamusFiles.isEmpty()) {
+        if (!args.oldIntermediaryFiles.isEmpty()) {
             System.err.println("Loading remapping files...");
-            state.prepareUpdate(args.oldCalamusFiles, args.matchesFiles);
+            state.prepareUpdate(args.oldIntermediaryFiles, args.matchesFiles);
         }
 
         System.err.println("Generating new mappings...");
-        state.generate(args.newCalamusFile, jarNew, jarsOld);
+        state.generate(args.newIntermediaryFile, jarNew, jarsOld);
         System.err.println("Done!");
     }
 
@@ -140,9 +140,9 @@ public class CalamusUtil
         }
         args.newJarFile = new File(rawArgs[index++]);
         for (int i = 0; i < oldFilesCount; i++) {
-            args.oldCalamusFiles.add(new File(rawArgs[index++]));
+            args.oldIntermediaryFiles.add(new File(rawArgs[index++]));
         }
-        args.newCalamusFile = new File(rawArgs[index++]);
+        args.newIntermediaryFile = new File(rawArgs[index++]);
         for (int i = 0; i < oldFilesCount; i++) {
             args.matchesFiles.add(new File(rawArgs[index++]));
         }
@@ -169,8 +169,8 @@ public class CalamusUtil
 
         private List<File> oldJarFiles = new ArrayList<>();
         private File newJarFile;
-        private List<File> oldCalamusFiles = new ArrayList<>();
-        private File newCalamusFile;
+        private List<File> oldIntermediaryFiles = new ArrayList<>();
+        private File newIntermediaryFile;
         private List<File> matchesFiles = new ArrayList<>();
 
         private String defaultPackage;

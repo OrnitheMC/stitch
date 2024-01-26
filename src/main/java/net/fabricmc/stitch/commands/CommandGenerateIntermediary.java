@@ -18,25 +18,25 @@
 package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.util.CalamusUtil;
+import net.fabricmc.stitch.util.IntermediaryUtil;
 
-public class CommandUpdateCalamus extends Command {
-    public CommandUpdateCalamus() {
-        super("updateCalamus");
+public class CommandGenerateIntermediary extends Command {
+    public CommandGenerateIntermediary() {
+        super("generateIntermediary");
     }
 
     @Override
     public String getHelpString() {
-        return "<old-jars>... <new-jar> <old-mapping-files>... <new-mapping-file> <match-files>... [--default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]";
+        return "<input-jar> <mapping-name> [--default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]...";
     }
 
     @Override
     public boolean isArgumentCountValid(int count) {
-        return count >= 5;
+        return count >= 2;
     }
 
     @Override
     public void run(String[] args) throws Exception {
-        CalamusUtil.updateCalamus(CalamusUtil.parseArgs(args));
+        IntermediaryUtil.generateIntermediary(IntermediaryUtil.parseArgs(args));
     }
 }

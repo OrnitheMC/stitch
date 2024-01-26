@@ -26,9 +26,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
 
-public class CommandRewriteCalamus extends Command {
-    public CommandRewriteCalamus() {
-        super("rewriteCalamus");
+public class CommandRewriteIntermediary extends Command {
+    public CommandRewriteIntermediary() {
+        super("rewriteIntermediary");
     }
 
     @Override
