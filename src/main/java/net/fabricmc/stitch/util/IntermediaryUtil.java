@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import net.fabricmc.stitch.commands.CommandCombineTiny;
 import net.fabricmc.stitch.commands.GenState;
 import net.fabricmc.stitch.representation.JarReader;
 import net.fabricmc.stitch.representation.JarRootEntry;
@@ -17,43 +18,265 @@ public class IntermediaryUtil
     public static void generateIntermediary(File jarFile, File intermediaryFile, String[] options) throws IOException {
         Args args = parseOptions(options);
 
+        args.oldJarFile = null;
+        args.otherJarFile = null;
         args.newJarFile = jarFile;
+        args.oldIntermediaryFile = null;
+        args.otherIntermediaryFile = null;
         args.newIntermediaryFile = intermediaryFile;
+        args.oldMatchesFile = null;
+        args.otherMatchesFile = null;
+        args.invertOldMatches = false;
+        args.invertOtherMatches = false;
 
-        generateIntermediary(args);
+        updateIntermediary(args, Args.Side.MERGED);
     }
 
-    public static void generateIntermediary(Args args) throws IOException {
-        args.oldJarFiles.clear();
-        args.oldIntermediaryFiles.clear();
-        args.matchesFiles.clear();
-
-        updateIntermediary(args);
+    public static void generateIntermediary(File clientJarFile, File serverJarFile, File intermediaryFile, File matchesFile, String[] options) throws IOException {
+        generateIntermediary(clientJarFile, serverJarFile, intermediaryFile, matchesFile, false, options);
     }
 
-    public static void updateIntermediary(List<File> oldJarFiles, File newJarFile, List<File> oldIntermediaryFiles, File newIntermediaryFile, List<File> matchesFiles, String[] options) throws IOException {
-        boolean[] invertMatches = new boolean[matchesFiles.size()];
-        for (int i = 0; i < matchesFiles.size(); i++) {
-            invertMatches[i] = false;
+    public static void generateIntermediary(File clientJarFile, File serverJarFile, File intermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
+        File tmp = new File(intermediaryFile, "tmp");
+        File clientIntermediaryFile = null;
+        File serverIntermediaryFile = null;
+        if (clientJarFile != null) {
+            clientIntermediaryFile = new File(tmp, "client-intermediary.tiny");
+        }
+        if (serverJarFile != null) {
+            serverIntermediaryFile = new File(tmp, "server-intermediary.tiny");
         }
 
-        updateIntermediary(oldJarFiles, newJarFile, oldIntermediaryFiles, newIntermediaryFile, matchesFiles, invertMatches, options);
+        tmp.mkdirs();
+
+        if (clientJarFile != null) {
+            Args args = parseOptions(options);
+
+            args.newJarFile = clientJarFile;
+            args.newIntermediaryFile = clientIntermediaryFile;
+
+            updateIntermediary(args, Args.Side.CLIENT);
+        }
+        if (serverJarFile != null) {
+            Args args = parseOptions(options);
+
+            if (clientJarFile != null) {
+                args.otherJarFile = clientJarFile;
+            }
+            args.newJarFile = serverJarFile;
+            if (clientIntermediaryFile != null) {
+                args.otherIntermediaryFile = clientIntermediaryFile;
+            }
+            args.newIntermediaryFile = serverIntermediaryFile;
+            if (matchesFile != null) {
+                args.otherMatchesFile = matchesFile;
+            }
+            args.invertOtherMatches = invertMatches;
+
+            updateIntermediary(args, Args.Side.SERVER);
+        }
+
+        System.err.println("Combining client and server mappings...");
+        try {
+            new CommandCombineTiny().run(new String[] {
+                clientIntermediaryFile.getAbsolutePath(),
+                serverIntermediaryFile.getAbsolutePath(),
+                intermediaryFile.getAbsolutePath()
+            });
+
+            if (clientIntermediaryFile != null) {
+                clientIntermediaryFile.delete();
+            }
+            if (serverIntermediaryFile != null) {
+                serverIntermediaryFile.delete();
+            }
+            tmp.delete();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public static void updateIntermediary(List<File> oldJarFiles, File newJarFile, List<File> oldIntermediaryFiles, File newIntermediaryFile, List<File> matchesFiles, boolean[] invertMatches, String[] options) throws IOException {
+    public static void updateIntermediary(File oldJarFile, File newJarFile, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, String[] options) throws IOException {
+        updateIntermediary(oldJarFile, newJarFile, oldIntermediaryFile, newIntermediaryFile, matchesFile, false, options);
+    }
+
+    public static void updateIntermediary(File oldJarFile, File newJarFile, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
         Args args = parseOptions(options);
 
-        args.oldJarFiles = oldJarFiles;
+        args.oldJarFile = oldJarFile;
+        args.otherJarFile = null;
         args.newJarFile = newJarFile;
-        args.oldIntermediaryFiles = oldIntermediaryFiles;
+        args.oldIntermediaryFile = oldIntermediaryFile;
+        args.otherIntermediaryFile = null;
         args.newIntermediaryFile = newIntermediaryFile;
-        args.matchesFiles = matchesFiles;
-        args.invertMatches = invertMatches;
+        args.oldMatchesFile = matchesFile;
+        args.otherMatchesFile = null;
+        args.invertOldMatches = invertMatches;
+        args.invertOtherMatches = false;
 
-        updateIntermediary(args);
+        updateIntermediary(args, Args.Side.MERGED);
     }
 
-    public static void updateIntermediary(Args args) throws IOException {
+    public static void updateIntermediary(File oldJarFile, File newClientJarFile, File newServerJarFile, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, String[] options) throws IOException {
+        updateIntermediary(oldJarFile, newClientJarFile, newServerJarFile, oldIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, false, false, false, options);
+    }
+
+    public static void updateIntermediary(File oldJarFile, File newClientJarFile, File newServerJarFile, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
+        File tmp = new File(newIntermediaryFile.getParentFile(), "tmp");
+        File newClientIntermediaryFile = null;
+        File newServerIntermediaryFile = null;
+        if (newClientJarFile != null) {
+            newClientIntermediaryFile = new File(tmp, "new-client-intermediary.tiny");
+        }
+        if (newServerJarFile != null) {
+            newServerIntermediaryFile = new File(tmp, "new-server-intermediary.tiny");
+        }
+
+        tmp.mkdirs();
+
+        if (newClientJarFile != null) {
+            Args args = parseOptions(options);
+
+            args.oldJarFile = oldJarFile;
+            args.newJarFile = newClientJarFile;
+            args.oldIntermediaryFile = oldIntermediaryFile;
+            args.newIntermediaryFile = newClientIntermediaryFile;
+            args.oldMatchesFile = clientMatchesFile;
+            args.invertOldMatches = invertClientMatches;
+
+            updateIntermediary(args, Args.Side.CLIENT);
+        }
+        if (newServerJarFile != null) {
+            Args args = parseOptions(options);
+
+            args.oldJarFile = oldJarFile;
+            if (newClientJarFile != null) {
+                args.otherJarFile = newClientJarFile;
+            }
+            args.newJarFile = newServerJarFile;
+            args.oldIntermediaryFile = oldIntermediaryFile;
+            if (newClientIntermediaryFile != null) {
+                args.otherIntermediaryFile = newClientIntermediaryFile;
+            }
+            args.newIntermediaryFile = newServerIntermediaryFile;
+            args.oldMatchesFile = serverMatchesFile;
+            if (clientServerMatchesFile != null) {
+                args.otherMatchesFile = clientServerMatchesFile;
+            }
+            args.invertOldMatches = invertServerMatches;
+            args.invertOtherMatches = invertClientServerMatches;
+
+            updateIntermediary(args, Args.Side.SERVER);
+        }
+
+        System.err.println("Combining client and server mappings...");
+        try {
+            new CommandCombineTiny().run(new String[] {
+                newClientIntermediaryFile.getAbsolutePath(),
+                newServerIntermediaryFile.getAbsolutePath(),
+                newIntermediaryFile.getAbsolutePath()
+            });
+
+            if (newClientIntermediaryFile != null) {
+                newClientIntermediaryFile.delete();
+            }
+            if (newServerIntermediaryFile != null) {
+                newServerIntermediaryFile.delete();
+            }
+            tmp.delete();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void updateIntermediary(File oldClientJarFile, File oldServerJarFile, File newClientJarFile, File newServerJarFile, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, String[] options) throws IOException {
+        updateIntermediary(oldClientJarFile, oldServerJarFile, newClientJarFile, newServerJarFile, oldIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, false, false, false, options);
+    }
+
+    public static void updateIntermediary(File oldClientJarFile, File oldServerJarFile, File newClientJarFile, File newServerJarFile, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
+        File tmp = new File(newIntermediaryFile, "tmp");
+        File oldClientIntermediaryFile = null;
+        File oldServerIntermediaryFile = null;
+        File newClientIntermediaryFile = null;
+        File newServerIntermediaryFile = null;
+        if (oldClientJarFile != null) {
+            oldClientIntermediaryFile = new File(tmp, "old-client-intermediary.tiny");
+        }
+        if (oldServerJarFile != null) {
+            oldServerIntermediaryFile = new File(tmp, "old-server-intermediary.tiny");
+        }
+        if (newClientJarFile != null) {
+            newClientIntermediaryFile = new File(tmp, "new-client-intermediary.tiny");
+        }
+        if (newServerJarFile != null) {
+            newServerIntermediaryFile = new File(tmp, "new-server-intermediary.tiny");
+        }
+
+        tmp.mkdirs();
+
+        if (newClientJarFile != null) {
+            Args args = parseOptions(options);
+
+            args.oldJarFile = oldClientJarFile;
+            args.newJarFile = newClientJarFile;
+            args.oldIntermediaryFile = oldClientIntermediaryFile;
+            args.newIntermediaryFile = newClientIntermediaryFile;
+            args.oldMatchesFile = clientMatchesFile;
+            args.invertOldMatches = invertClientMatches;
+
+            updateIntermediary(args, Args.Side.CLIENT);
+        }
+        if (newServerJarFile != null) {
+            Args args = parseOptions(options);
+
+            args.oldJarFile = oldServerJarFile;
+            if (newClientJarFile != null) {
+                args.otherJarFile = newClientJarFile;
+            }
+            args.newJarFile = newServerJarFile;
+            args.oldIntermediaryFile = oldServerIntermediaryFile;
+            if (newClientIntermediaryFile != null) {
+                args.otherIntermediaryFile = newClientIntermediaryFile;
+            }
+            args.newIntermediaryFile = newServerIntermediaryFile;
+            args.oldMatchesFile = serverMatchesFile;
+            if (clientServerMatchesFile != null) {
+                args.otherMatchesFile = clientServerMatchesFile;
+            }
+            args.invertOldMatches = invertServerMatches;
+            args.invertOtherMatches = invertClientServerMatches;
+
+            updateIntermediary(args, Args.Side.SERVER);
+        }
+
+        System.err.println("Combining client and server mappings...");
+        try {
+            new CommandCombineTiny().run(new String[] {
+                newClientIntermediaryFile.getAbsolutePath(),
+                newServerIntermediaryFile.getAbsolutePath(),
+                newIntermediaryFile.getAbsolutePath()
+            });
+
+            if (oldClientIntermediaryFile != null) {
+                oldClientIntermediaryFile.delete();
+            }
+            if (oldServerIntermediaryFile != null) {
+                oldServerIntermediaryFile.delete();
+            }
+            if (newClientIntermediaryFile != null) {
+                newClientIntermediaryFile.delete();
+            }
+            if (newServerIntermediaryFile != null) {
+                newServerIntermediaryFile.delete();
+            }
+
+            tmp.delete();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void updateIntermediary(Args args, Args.Side side) throws IOException {
         GenState state = new GenState();
 
         if (args.defaultPackage != null) {
@@ -72,45 +295,49 @@ public class IntermediaryUtil
             state.setNameLength(args.nameLength);
         }
         ByteBuffer salt = ByteBuffer.allocate(256);
-        if (args.clientHash != null) {
-            salt.put(args.clientHash.getBytes(StandardCharsets.UTF_8));
+        if (args.clientHash != null && side.isClient()) {
+            salt.put(salt.position(), args.clientHash.getBytes(StandardCharsets.UTF_8));
         }
-        if (args.serverHash != null) {
-            salt.put(args.serverHash.getBytes(StandardCharsets.UTF_8));
-        }
-
-        List<JarRootEntry> jarsOld = new ArrayList<>();
-        for (File oldJarFile : args.oldJarFiles) {
-            JarRootEntry jarOld = new JarRootEntry(oldJarFile);
-            jarsOld.add(jarOld);
-            try {
-                new JarReader(jarOld).apply(salt.array());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (args.serverHash != null && side.isServer()) {
+            salt.put(salt.position(), args.serverHash.getBytes(StandardCharsets.UTF_8));
         }
 
+        JarRootEntry jarOld = null;
+        if (args.oldJarFile != null) {
+            jarOld = new JarRootEntry(args.oldJarFile);
+        }
+        JarRootEntry jarOther = null;
+        if (args.otherJarFile != null) {
+            jarOther = new JarRootEntry(args.otherJarFile);
+        }
         JarRootEntry jarNew = new JarRootEntry(args.newJarFile);
+
         try {
+            if (jarOld != null) {
+                new JarReader(jarOld).apply();
+            }
+            if (jarOther != null) {
+                new JarReader(jarOther).apply();
+            }
             new JarReader(jarNew).apply(salt.array());
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
-        if (!args.oldIntermediaryFiles.isEmpty()) {
+        if (args.oldIntermediaryFile != null || args.otherIntermediaryFile != null) {
             System.err.println("Loading remapping files...");
-            state.prepareUpdate(args.oldIntermediaryFiles, args.matchesFiles, args.invertMatches);
+            state.prepareUpdate(args.oldIntermediaryFile, args.otherIntermediaryFile, args.oldMatchesFile, args.otherMatchesFile, args.invertOldMatches, args.invertOtherMatches);
         }
 
         System.err.println("Generating new mappings...");
-        state.generate(args.newIntermediaryFile, jarNew, jarsOld);
+        state.generate(args.newIntermediaryFile, jarNew, jarOld, jarOther);
         System.err.println("Done!");
     }
 
     public static Args parseArgs(String[] rawArgs) {
         Args args = new Args();
 
-        int oldFilesCount = 0;
+        int fileCount = 0;
 
         // first two args are always files
         for (int i = 2; i < rawArgs.length; i++) {
@@ -137,38 +364,47 @@ public class IntermediaryUtil
                 break;
             default:
                 // this arg is not an option, i.e. it's a file
-                oldFilesCount++;
+                fileCount++;
                 break;
             }
         }
 
+        if (fileCount == 0) {
+            return args;
+        }
+
         // after all the files is the invert matches booleans
         // first check if they are present, since they are optional
-        String lastArg = rawArgs[oldFilesCount - 1];
+        String lastArg = rawArgs[fileCount - 1];
+        boolean parseInvertMatches = "true".equals(lastArg) || "false".equals(lastArg);
 
-        if ("true".equals(lastArg) || "false".equals(lastArg)) {
-            oldFilesCount /= 4;
+        if (parseInvertMatches) {
+            fileCount /= 4;
         } else {
-            oldFilesCount /= 3;
+            fileCount /= 3;
         }
 
+        boolean splitJar = (fileCount == 3);
         int index = 0;
 
-        for (int i = 0; i < oldFilesCount; i++) {
-            args.oldJarFiles.add(new File(rawArgs[index++]));
+        args.oldJarFile = new File(rawArgs[index++]);
+        if (splitJar) {
+            args.otherJarFile = new File(rawArgs[index++]);
         }
         args.newJarFile = new File(rawArgs[index++]);
-        for (int i = 0; i < oldFilesCount; i++) {
-            args.oldIntermediaryFiles.add(new File(rawArgs[index++]));
+        args.oldIntermediaryFile = new File(rawArgs[index++]);
+        if (splitJar) {
+            args.otherIntermediaryFile = new File(rawArgs[index++]);
         }
         args.newIntermediaryFile = new File(rawArgs[index++]);
-        for (int i = 0; i < oldFilesCount; i++) {
-            args.matchesFiles.add(new File(rawArgs[index++]));
+        args.oldMatchesFile = new File(rawArgs[index++]);
+        if (splitJar) {
+            args.otherMatchesFile = new File(rawArgs[index++]);
         }
-        if (index < oldFilesCount) {
-            args.invertMatches = new boolean[args.matchesFiles.size()];
-            for (int i = 0; i < oldFilesCount; i++) {
-                args.invertMatches[i] = Boolean.parseBoolean(rawArgs[index++]);
+        if (parseInvertMatches) {
+            args.invertOldMatches = Boolean.parseBoolean(rawArgs[index++]);
+            if (splitJar) {
+                args.invertOtherMatches = Boolean.parseBoolean(rawArgs[index++]);
             }
         }
 
@@ -192,12 +428,17 @@ public class IntermediaryUtil
 
     public static class Args {
 
-        private List<File> oldJarFiles = new ArrayList<>();
+        private File oldJarFile;
+        private File otherJarFile;
         private File newJarFile;
-        private List<File> oldIntermediaryFiles = new ArrayList<>();
+        private File oldIntermediaryFile;
+        private File otherIntermediaryFile;
         private File newIntermediaryFile;
-        private List<File> matchesFiles = new ArrayList<>();
-        private boolean[] invertMatches;
+        private File oldMatchesFile;
+        private File otherMatchesFile;
+        private boolean invertOldMatches;
+        private boolean invertOtherMatches;
+        private Side side;
 
         private String defaultPackage;
         private String targetNamespace;
@@ -206,5 +447,17 @@ public class IntermediaryUtil
         private String clientHash;
         private String serverHash;
 
+        public enum Side {
+
+            CLIENT, SERVER, MERGED;
+
+            public boolean isClient() {
+                return this == CLIENT || this == MERGED;
+            }
+
+            public boolean isServer() {
+                return this == SERVER || this == MERGED;
+            }
+        }
     }
 }

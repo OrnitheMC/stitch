@@ -19,6 +19,7 @@ package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.IntermediaryUtil;
+import net.fabricmc.stitch.util.IntermediaryUtil.Args;
 
 public class CommandUpdateIntermediary extends Command {
     public CommandUpdateIntermediary() {
@@ -27,7 +28,7 @@ public class CommandUpdateIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<old-jars>... <new-jar> <old-mapping-files>... <new-mapping-file> <match-files>... [<invert matches>... --default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]";
+        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <old-jar-match-file> [<invert-old-jar-match>] [--default-package <default package>] [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [--name-length <length>] [--client-hash <hash>] [--server-hash <hash>]";
     }
 
     @Override
@@ -37,6 +38,6 @@ public class CommandUpdateIntermediary extends Command {
 
     @Override
     public void run(String[] args) throws Exception {
-        IntermediaryUtil.updateIntermediary(IntermediaryUtil.parseArgs(args));
+        IntermediaryUtil.updateIntermediary(IntermediaryUtil.parseArgs(args), Args.Side.MERGED);
     }
 }

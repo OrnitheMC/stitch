@@ -121,8 +121,11 @@ public class CommandCombineTinyV2 extends Command {
     }
 
     private void readInput(Path input, BiConsumer<String, String> cls, BiConsumer<EntryTriple, String> fld, BiConsumer<EntryTriple, String> mtd) throws IOException {
+        int lineNumber = 0;
+
         try (BufferedReader br = Files.newBufferedReader(input, StandardCharsets.UTF_8)) {
             String[] header = br.readLine().split("\t");
+            lineNumber++;
 
             if (header.length != 5 || !header[0].trim().equals("tiny") || !header[1].trim().equals("2")) {
                 throw new RuntimeException("Invalid header!");
@@ -144,6 +147,7 @@ public class CommandCombineTinyV2 extends Command {
             String lastCls = null;
 
             while ((line = br.readLine()) != null) {
+                lineNumber++;
                 String[] parts = line.split("\t");
 
                 for (indents = 0; indents < parts.length; indents++) {
@@ -185,6 +189,8 @@ public class CommandCombineTinyV2 extends Command {
                     throw new IllegalStateException("unsupported entry type " + parts[indents]);
                 }
             }
+        } catch (Throwable t) {
+            throw new IOException("error reading tiny 2 file on line " + lineNumber, t);
         }
     }
 }

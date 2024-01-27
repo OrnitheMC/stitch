@@ -19,6 +19,7 @@ package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.IntermediaryUtil;
+import net.fabricmc.stitch.util.IntermediaryUtil.Args;
 
 public class CommandGenerateIntermediary extends Command {
     public CommandGenerateIntermediary() {
@@ -37,6 +38,6 @@ public class CommandGenerateIntermediary extends Command {
 
     @Override
     public void run(String[] args) throws Exception {
-        IntermediaryUtil.generateIntermediary(IntermediaryUtil.parseArgs(args));
+        IntermediaryUtil.updateIntermediary(IntermediaryUtil.parseArgs(args), Args.Side.MERGED);
     }
 }

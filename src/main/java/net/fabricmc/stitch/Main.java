@@ -18,17 +18,13 @@
 package net.fabricmc.stitch;
 
 import net.fabricmc.stitch.commands.*;
-import net.fabricmc.stitch.commands.tinyv2.CommandCombineTinyV2;
-import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
-import net.fabricmc.stitch.commands.tinyv2.CommandProposeV2FieldNames;
+import net.fabricmc.stitch.commands.tinyv2.*;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
-
-import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
 
 public class Main
 {
@@ -49,11 +45,13 @@ public class Main
         addCommand(new CommandProposeFieldNames());
         addCommand(new CommandReorderTiny());
         addCommand(new CommandRewriteIntermediary());
+        addCommand(new CommandSplitTiny());
         addCommand(new CommandUpdateIntermediary());
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
         addCommand(new CommandCombineTinyV2());
         addCommand(new CommandProposeV2FieldNames());
+        addCommand(new CommandSplitTinyV2());
     }
 
     public static void addCommand(Command command) {

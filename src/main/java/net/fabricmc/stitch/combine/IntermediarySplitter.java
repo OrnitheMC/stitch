@@ -22,109 +22,50 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.function.BiConsumer;
 
 import org.objectweb.asm.Type;
 
 import net.fabricmc.mapping.util.EntryTriple;
 
-public class IntermediaryCombiner {
+public class IntermediarySplitter {
 
     private Map<String, ClassEntry> clientIntermediary = new TreeMap<>();
     private Map<String, ClassEntry> serverIntermediary = new TreeMap<>();
 
-    public void readClient(Path input, Reader r) throws IOException {
-        r.accept(input, this::addClientClass, this::addClientField, this::addClientMethod);
+    public void read(Path input, Reader r) throws IOException {
+        r.accept(input, this::addClass, this::addField, this::addMethod);
     }
 
-    public void readServer(Path input, Reader r) throws IOException {
-        r.accept(input, this::addServerClass, this::addServerField, this::addServerMethod);
+    public void write(Path clientOutput, Path serverOutput, Writer writer) throws IOException {
+        splitMappingsToOutput(clientIntermediary, clientOutput, new SafeWriter(writer));
+        splitMappingsToOutput(serverIntermediary, serverOutput, new SafeWriter(writer));
     }
 
-    public void writeCombined(ClassWriter clsw, FieldWriter fldw, MethodWriter mtdw) throws IOException {
-        Map<String, ClassEntry> invertedClient = new TreeMap<>();
-        Map<String, ClassEntry> invertedServer = new TreeMap<>();
-
-        invert(clientIntermediary, invertedClient);
-        invert(serverIntermediary, invertedServer);
-
-        clientIntermediary = invertedClient;
-        serverIntermediary = invertedServer;
-
-        for (ClassEntry cCls : clientIntermediary.values()) {
-            ClassEntry sCls = serverIntermediary.get(cCls.name);
-
-            if (sCls == null) {
-                clsw.accept(cCls.name, cCls.target, "");
-            } else {
-                clsw.accept(cCls.name, cCls.target, sCls.target);
-            }
-
-            for (FieldEntry cFld : cCls.fields.values()) {
-                FieldEntry sFld = (sCls == null) ? null : sCls.fields.get(cFld.name + cFld.desc);
-
-                if (sFld == null) {
-                    fldw.accept(cCls.name, cFld.name, cFld.desc, cFld.target, "");
-                } else {
-                    fldw.accept(cCls.name, cFld.name, cFld.desc, cFld.target, sFld.target); 
-                }
-            }
-            for (MethodEntry cMtd : cCls.methods.values()) {
-                MethodEntry sMtd = (sCls == null) ? null : sCls.methods.get(cMtd.name + cMtd.desc);
-
-                if (sMtd == null) {
-                    mtdw.accept(cCls.name, cMtd.name, cMtd.desc, cMtd.target, "");
-                } else {
-                    mtdw.accept(cCls.name, cMtd.name, cMtd.desc, cMtd.target, sMtd.target); 
-                }
-            }
+    private void addClass(String name, String client, String server) {
+        if (client != null) {
+            addClass("client", clientIntermediary, name, client);
         }
-        for (ClassEntry sCls : serverIntermediary.values()) {
-            ClassEntry cCls = clientIntermediary.get(sCls.name);
-
-            if (cCls == null) {
-                clsw.accept(sCls.name, "", sCls.target);
-            }
-
-            for (FieldEntry sFld : sCls.fields.values()) {
-                FieldEntry cFld = (cCls == null) ? null : cCls.fields.get(sFld.name + sFld.desc);
-
-                if (cFld == null) {
-                    fldw.accept(sCls.name, sFld.name, sFld.desc, "", sFld.target);
-                }
-            }
-            for (MethodEntry sMtd : sCls.methods.values()) {
-                MethodEntry cMtd = (cCls == null) ? null : cCls.methods.get(sMtd.name + sMtd.desc);
-
-                if (cMtd == null) {
-                    fldw.accept(sCls.name, sMtd.name, sMtd.desc, "", sMtd.target);
-                }
-            }
+        if (server != null) {
+            addClass("server", serverIntermediary, name, server);
         }
     }
 
-    private void addClientClass(String name, String target) {
-        addClass("client", clientIntermediary, name, target);
+    private void addField(EntryTriple src, String client, String server) {
+        if (client != null) {
+            addField("client", clientIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), client);
+        }
+        if (server != null) {
+            addField("server", serverIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), server);
+        }
     }
 
-    private void addClientField(EntryTriple src, String target) {
-        addField("client", clientIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), target);
-    }
-
-    private void addClientMethod(EntryTriple src, String target) {
-        addMethod("client", clientIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), target);
-    }
-
-    private void addServerClass(String name, String target) {
-        addClass("server", serverIntermediary, name, target);
-    }
-
-    private void addServerField(EntryTriple src, String target) {
-        addField("server", serverIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), target);
-    }
-
-    private void addServerMethod(EntryTriple src, String target) {
-        addMethod("server", serverIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), target);
+    private void addMethod(EntryTriple src, String client, String server) {
+        if (client != null) {
+            addMethod("client", clientIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), client);
+        }
+        if (server != null) {
+            addMethod("server", serverIntermediary, src.getOwner(), src.getName(), src.getDescriptor(), server);
+        }
     }
 
     private void addClass(String side, Map<String, ClassEntry> intermediary, String name, String target) {
@@ -175,16 +116,22 @@ public class IntermediaryCombiner {
 
     private void invert(Map<String, ClassEntry> src, Map<String, ClassEntry> dst) {
         for (ClassEntry cls : src.values()) {
-            ClassEntry invCls = new ClassEntry(cls.target, cls.name);
-            dst.put(invCls.name, invCls);
+            if (cls.target != null) {
+                ClassEntry invCls = new ClassEntry(cls.target, cls.name);
+                dst.put(invCls.name, invCls);
 
-            for (FieldEntry fld : cls.fields.values()) {
-                FieldEntry invFld = new FieldEntry(fld.target, remapFieldDescriptor(fld.desc, src), fld.name);
-                invCls.fields.put(invFld.name + invFld.desc, invFld);
-            }
-            for (MethodEntry mtd : cls.methods.values()) {
-                MethodEntry invMtd = new MethodEntry(mtd.target, remapMethodDescriptor(mtd.desc, src), mtd.name);
-                invCls.methods.put(invMtd.name + invMtd.desc, invMtd);
+                for (FieldEntry fld : cls.fields.values()) {
+                    if (fld.target != null) {
+                        FieldEntry invFld = new FieldEntry(fld.target, remapFieldDescriptor(fld.desc, src), fld.name);
+                        invCls.fields.put(invFld.name + invFld.desc, invFld);
+                    }
+                }
+                for (MethodEntry mtd : cls.methods.values()) {
+                    if (mtd.target != null) {
+                        MethodEntry invMtd = new MethodEntry(mtd.target, remapMethodDescriptor(mtd.desc, src), mtd.name);
+                        invCls.methods.put(invMtd.name + invMtd.desc, invMtd);
+                    }
+                }
             }
         }
     }
@@ -240,6 +187,28 @@ public class IntermediaryCombiner {
         }
 
         return type;
+    }
+
+    private void splitMappingsToOutput(Map<String, ClassEntry> intermediary, Path output, SafeWriter writer) throws IOException {
+        if (!intermediary.isEmpty()) {
+            Map<String, ClassEntry> inverted = new TreeMap<>();
+            invert(intermediary, inverted);
+
+            writer.open(output);
+
+            for (ClassEntry cls : inverted.values()) {
+                writer.acceptClass(cls.name, cls.target);
+
+                for (FieldEntry fld : cls.fields.values()) {
+                    writer.acceptField(cls.name, fld.name, fld.desc, fld.target);
+                }
+                for (MethodEntry mtd : cls.methods.values()) {
+                    writer.acceptMethod(cls.name, mtd.name, mtd.desc, mtd.target);
+                }
+            }
+
+            writer.close();
+        }
     }
 
     private static class Entry {
@@ -301,22 +270,63 @@ public class IntermediaryCombiner {
     }
 
     @FunctionalInterface
+    public interface TriConsumer<A, B, C> {
+        void accept(A a, B b, C c);
+    }
+
+    @FunctionalInterface
     public interface Reader {
-        void accept(Path input, BiConsumer<String, String> cls, BiConsumer<EntryTriple, String> fld, BiConsumer<EntryTriple, String> mtd) throws IOException;
+        void accept(Path input, TriConsumer<String, String, String> cls, TriConsumer<EntryTriple, String, String> fld, TriConsumer<EntryTriple, String, String> mtd) throws IOException;
     }
 
-    @FunctionalInterface
-    public interface ClassWriter {
-        void accept(String target, String client, String server) throws IOException;
+    public interface Writer {
+        boolean open(Path path) throws IOException;
+        void acceptClass(String cls, String target) throws IOException;
+        void acceptField(String cls, String name, String desc, String target) throws IOException;
+        void acceptMethod(String cls, String name, String desc, String target) throws IOException;
+        void close() throws IOException;
     }
 
-    @FunctionalInterface
-    public interface FieldWriter {
-        void accept(String targetCls, String target, String targetDesc, String client, String server) throws IOException;
-    }
+    private static class SafeWriter implements Writer{
 
-    @FunctionalInterface
-    public interface MethodWriter {
-        void accept(String targetCls, String target, String targetDesc, String client, String server) throws IOException;
+        private final Writer delegate;
+        private boolean active;
+
+        public SafeWriter(Writer delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean open(Path path) throws IOException {
+            return active = delegate.open(path);
+        }
+
+        @Override
+        public void acceptClass(String name, String target) throws IOException {
+            if (active) {
+                delegate.acceptClass(name, target);
+            }
+        }
+
+        @Override
+        public void acceptField(String cls, String name, String desc, String target) throws IOException {
+            if (active) {
+                delegate.acceptField(cls, name, desc, target);
+            }
+        }
+
+        @Override
+        public void acceptMethod(String cls, String name, String desc, String target) throws IOException {
+            if (active) {
+                delegate.acceptMethod(cls, name, desc, target);
+            }
+        }
+
+        @Override
+        public void close() throws IOException{
+            if (active) {
+                delegate.close();
+            }
+        }
     }
 }

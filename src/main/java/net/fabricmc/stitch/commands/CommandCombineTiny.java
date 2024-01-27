@@ -118,9 +118,11 @@ public class CommandCombineTiny extends Command {
         System.out.println("Done!");
     }
 
-    private void readInput(Path input, BiConsumer<String, String> cls, BiConsumer<EntryTriple, String> fld,
-            BiConsumer<EntryTriple, String> mtd) throws IOException {
+    private void readInput(Path input, BiConsumer<String, String> cls, BiConsumer<EntryTriple, String> fld, BiConsumer<EntryTriple, String> mtd) throws IOException {
+        int lineNumber = 0;
+
         try (BufferedReader br = Files.newBufferedReader(input, StandardCharsets.UTF_8)) {
+            lineNumber++;
             String[] header = br.readLine().split("\t");
 
             if (header.length != 3 || !header[0].trim().equals("v1")) {
@@ -140,6 +142,7 @@ public class CommandCombineTiny extends Command {
             String line;
 
             while ((line = br.readLine()) != null) {
+                lineNumber++;
                 line = line.trim();
                 if (line.length() == 0 || line.charAt(0) == '#') {
                     continue;
@@ -183,6 +186,8 @@ public class CommandCombineTiny extends Command {
                     throw new IllegalStateException("unsupported entry type " + parts[0]);
                 }
             }
+        } catch (Throwable t) {
+            throw new IOException("error reading tiny file on line " + lineNumber, t);
         }
     }
 }
