@@ -36,6 +36,7 @@ public class JarClassEntry extends AbstractJarEntry
     String enclosingMethodName;
     String enclosingMethodDescriptor;
     String innerName;
+    int innerAccess;
     String signature;
     String superclass;
     List<String> interfaces;
@@ -63,6 +64,7 @@ public class JarClassEntry extends AbstractJarEntry
             this.enclosingMethodName = populator.enclosingMethodName;
             this.enclosingMethodDescriptor = populator.enclosingMethodDescriptor;
             this.innerName = populator.innerName;
+            this.innerAccess = populator.innerAccess;
         }
         this.signature = populator.signature;
         this.superclass = populator.superclass;
@@ -147,6 +149,10 @@ public class JarClassEntry extends AbstractJarEntry
 
     public String getInnerName() {
         return innerName;
+    }
+
+    public int getInnerAccess() {
+        return innerAccess;
     }
 
     public String getSuperClassName() {
@@ -274,6 +280,7 @@ public class JarClassEntry extends AbstractJarEntry
         public String enclosingMethodName;
         public String enclosingMethodDescriptor;
         public String innerName;
+        public int innerAccess;
         public String signature;
         public String superclass;
         public String[] interfaces;

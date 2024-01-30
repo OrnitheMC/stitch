@@ -52,6 +52,7 @@ public class Main
         addCommand(new CommandCombineTinyV2());
         addCommand(new CommandProposeV2FieldNames());
         addCommand(new CommandSplitTinyV2());
+        addCommand(new CommandGenerateNests());
     }
 
     public static void addCommand(Command command) {

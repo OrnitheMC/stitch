@@ -115,6 +115,7 @@ public class JarReader
                                 populator.nested = true; 
                                 populator.declaringClassName = outerName;
                                 populator.innerName = innerName;
+                                populator.innerAccess = access;
                             }
 
                             super.visitInnerClass(name, outerName, innerName, access);
