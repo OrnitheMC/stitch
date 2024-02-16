@@ -39,6 +39,10 @@ public final class Access {
         return (access & Opcodes.ACC_INTERFACE) != 0;
     }
 
+    public static boolean isEnum(int access) {
+        return (access & Opcodes.ACC_ENUM) != 0;
+    }
+
     public static boolean isNative(int access) {
         return (access & (Opcodes.ACC_NATIVE)) != 0;
     }

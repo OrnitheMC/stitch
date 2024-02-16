@@ -30,7 +30,7 @@ public class ClassPropagationTree {
     private final Set<JarClassEntry> relevantClasses;
     private final Set<JarClassEntry> topmostClasses;
 
-    public ClassPropagationTree(JarRootEntry jar, JarClassEntry baseClass) {
+    public ClassPropagationTree(Classpath storage, JarClassEntry baseClass) {
         relevantClasses = StitchUtil.newIdentityHashSet();
         topmostClasses = StitchUtil.newIdentityHashSet();
 
@@ -45,14 +45,14 @@ public class ClassPropagationTree {
             relevantClasses.add(entry);
 
             int qSize = queue.size();
-            queue.addAll(entry.getSubclasses(jar));
-            queue.addAll(entry.getImplementers(jar));
+            queue.addAll(entry.getSubclasses(storage));
+            queue.addAll(entry.getImplementers(storage));
             if (qSize == queue.size()) {
                 topmostClasses.add(entry);
             }
 
-            queue.addAll(entry.getInterfaces(jar));
-            JarClassEntry superClass = entry.getSuperClass(jar);
+            queue.addAll(entry.getInterfaces(storage));
+            JarClassEntry superClass = entry.getSuperClass(storage);
             if (superClass != null) {
                 queue.add(superClass);
             }

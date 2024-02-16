@@ -73,9 +73,9 @@ public class CommandCombineTiny extends Command {
             bw.write("\t");
             bw.write("intermediary");
             bw.write("\t");
-            bw.write("client");
+            bw.write("officialClient");
             bw.write("\t");
-            bw.write("server");
+            bw.write("officialServer");
             bw.newLine();
 
             combiner.writeCombined((cls, clsC, clsS) -> {

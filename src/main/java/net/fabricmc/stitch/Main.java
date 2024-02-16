@@ -38,15 +38,12 @@ public class Main
             throw new RuntimeException(e);
         }
 
-        addCommand(new CommandGenerateIntermediary());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandCombineTiny());
         addCommand(new CommandProposeFieldNames());
         addCommand(new CommandReorderTiny());
-        addCommand(new CommandRewriteIntermediary());
         addCommand(new CommandSplitTiny());
-        addCommand(new CommandUpdateIntermediary());
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
         addCommand(new CommandCombineTinyV2());

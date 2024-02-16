@@ -24,6 +24,7 @@ import java.util.*;
 public class JarRootEntry extends AbstractJarEntry
 {
     final File file;
+    final Set<String> classQueue;
     final Map<String, JarClassEntry> classTree;
     final Map<String, JarClassEntry> allClasses;
 
@@ -31,6 +32,7 @@ public class JarRootEntry extends AbstractJarEntry
         super(file.getName(), "");
 
         this.file = file;
+        this.classQueue = new LinkedHashSet<>();
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
         this.allClasses = new TreeMap<>(Comparator.naturalOrder());
     }

@@ -24,9 +24,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.representation.Classpath;
 import net.fabricmc.stitch.representation.JarClassEntry;
 import net.fabricmc.stitch.representation.JarReader;
-import net.fabricmc.stitch.representation.JarRootEntry;
 
 public class CommandGenerateNests extends Command {
 
@@ -59,14 +59,14 @@ public class CommandGenerateNests extends Command {
             throw new RuntimeException("cannot write to output path");
         }
 
-        JarRootEntry jar = new JarRootEntry(input.toFile());
+        Classpath storage = new Classpath(input.toFile());
         try {
-            new JarReader(jar).apply();
+            new JarReader(storage).apply();
         } catch (IOException e) {
             throw new RuntimeException("could not read input jar", e);
         }
         try (BufferedWriter bw = Files.newBufferedWriter(output, StandardCharsets.UTF_8)) {
-            for (JarClassEntry cls : jar.getAllClasses()) {
+            for (JarClassEntry cls : storage.getJar().getAllClasses()) {
                 if (cls.isAnonymous()) {
                     String fullName = cls.getName();
                     int i = fullName.lastIndexOf('$');

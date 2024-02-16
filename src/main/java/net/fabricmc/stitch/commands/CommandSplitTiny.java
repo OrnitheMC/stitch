@@ -80,7 +80,7 @@ public class CommandSplitTiny extends Command {
             public boolean open(Path path) throws IOException {
                 if (path != null) {
                     System.out.println("Writing " + path);
-                    writer = new BufferedWriter(Files.newBufferedWriter(path, StandardCharsets.UTF_8));
+                    writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8);
 
                     writer().write("v1");
                     writer().write("\t");
@@ -168,17 +168,17 @@ public class CommandSplitTiny extends Command {
             int serverNs = -1;
 
             if (!"intermediary".equals(srcNs)) {
-                throw new RuntimeException("invalid src namespace! only 'intermediary' is supported!");
+                throw new RuntimeException("invalid src namespace '" + srcNs + "'! only 'intermediary' is supported!");
             }
             for (int i = 2; i < header.length; i++) {
                 String dstNs = header[i];
 
-                if ("client".equals(dstNs)) {
+                if ("officialClient".equals(dstNs)) {
                     clientNs = i - 1;
-                } else if ("server".equals(dstNs)) {
+                } else if ("officialServer".equals(dstNs)) {
                     serverNs = i - 1;
                 } else {
-                    throw new RuntimeException("invalid dst namespace! only 'client' or 'server' is supported!");
+                    throw new RuntimeException("invalid dst namespace '" + dstNs + "'! only 'officialClient' or 'officialServer' is supported!");
                 }
             }
 

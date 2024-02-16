@@ -46,7 +46,7 @@ public class JarMethodEntry extends AbstractJarEntry
         return super.getKey() + desc;
     }
 
-    public boolean isSource(JarRootEntry storage, JarClassEntry c) {
+    public boolean isSource(Classpath storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return true;
         }
@@ -57,7 +57,7 @@ public class JarMethodEntry extends AbstractJarEntry
         return entries.size() == 1;
     }
 
-    public List<JarClassEntry> getMatchingEntries(JarRootEntry storage, JarClassEntry c) {
+    public List<JarClassEntry> getMatchingEntries(Classpath storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return Collections.singletonList(c);
         }
@@ -88,7 +88,7 @@ public class JarMethodEntry extends AbstractJarEntry
         return new ArrayList<>(entries);
     }
 
-    void getMatchingSources(Collection<JarClassEntry> entries, JarRootEntry storage, JarClassEntry c) {
+    void getMatchingSources(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c) {
         JarMethodEntry m = c.getMethod(getKey());
         if (m != null) {
             if (!Access.isPrivateOrStatic(m.getAccess())) {
@@ -106,7 +106,7 @@ public class JarMethodEntry extends AbstractJarEntry
         }
     }
 
-    void getMatchingEntries(Collection<JarClassEntry> entries, JarRootEntry storage, JarClassEntry c, int indent) {
+    void getMatchingEntries(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c, int indent) {
         entries.add(c);
 
         for (JarClassEntry cc : c.getSubclasses(storage)) {

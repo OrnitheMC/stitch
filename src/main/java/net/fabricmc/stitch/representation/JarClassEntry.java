@@ -71,13 +71,14 @@ public class JarClassEntry extends AbstractJarEntry
         this.interfaces = Arrays.asList(populator.interfaces);
     }
 
-    protected void populateParents(JarRootEntry storage) {
-        JarClassEntry superEntry = getSuperClass(storage);
+    protected void populateParents(Classpath storage) {
+        JarClassEntry superEntry = storage.findClass(superclass);
         if (superEntry != null) {
             superEntry.subclasses.add(name);
         }
 
-        for (JarClassEntry itf : getInterfaces(storage)) {
+        for (int i = 0; i < interfaces.size(); i++) {
+            JarClassEntry itf = storage.findClass(interfaces.get(i));
             if (itf != null) {
                 itf.implementers.add(name);
             }
@@ -123,12 +124,20 @@ public class JarClassEntry extends AbstractJarEntry
         return declaringClass;
     }
 
+    public JarClassEntry getDeclaringClass(Classpath storage) {
+        return hasDeclaringClass() ? storage.getClass(declaringClass) : null;
+    }
+
     public JarClassEntry getDeclaringClass(JarRootEntry storage) {
         return hasDeclaringClass() ? storage.getClass(declaringClass, null) : null;
     }
 
     public String getEnclosingClassName() {
         return enclosingClass;
+    }
+
+    public JarClassEntry getEnclosingClass(Classpath storage) {
+        return hasEnclosingClass() ? storage.getClass(enclosingClass) : null;
     }
 
     public JarClassEntry getEnclosingClass(JarRootEntry storage) {
@@ -159,15 +168,15 @@ public class JarClassEntry extends AbstractJarEntry
         return superclass;
     }
 
-    public JarClassEntry getSuperClass(JarRootEntry storage) {
-        return storage.getClass(superclass, null);
+    public JarClassEntry getSuperClass(Classpath storage) {
+        return storage.getClass(superclass);
     }
 
     public List<String> getInterfaceNames() {
         return Collections.unmodifiableList(interfaces);
     }
 
-    public List<JarClassEntry> getInterfaces(JarRootEntry storage) {
+    public List<JarClassEntry> getInterfaces(Classpath storage) {
         return toClassEntryList(storage, interfaces);
     }
 
@@ -187,7 +196,7 @@ public class JarClassEntry extends AbstractJarEntry
         return Collections.unmodifiableList(subclasses);
     }
 
-    public List<JarClassEntry> getSubclasses(JarRootEntry storage) {
+    public List<JarClassEntry> getSubclasses(Classpath storage) {
         return toClassEntryList(storage, subclasses);
     }
 
@@ -195,17 +204,17 @@ public class JarClassEntry extends AbstractJarEntry
         return Collections.unmodifiableList(implementers);
     }
 
-    public List<JarClassEntry> getImplementers(JarRootEntry storage) {
+    public List<JarClassEntry> getImplementers(Classpath storage) {
         return toClassEntryList(storage, implementers);
     }
 
-    private List<JarClassEntry> toClassEntryList(JarRootEntry storage, List<String> stringList) {
+    private List<JarClassEntry> toClassEntryList(Classpath storage, List<String> stringList) {
         if (stringList == null) {
             return Collections.emptyList();
         }
 
         return stringList.stream()
-              .map((s) -> storage.getClass(s, null))
+              .map(storage::getClass)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
     }

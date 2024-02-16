@@ -80,7 +80,7 @@ public class CommandSplitTinyV2 extends Command {
             public boolean open(Path path) throws IOException {
                 if (path != null) {
                     System.out.println("Writing " + path);
-                    writer = new BufferedWriter(Files.newBufferedWriter(path, StandardCharsets.UTF_8));
+                    writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8);
 
                     writer().write("tiny");
                     writer().write("\t");
@@ -175,9 +175,9 @@ public class CommandSplitTinyV2 extends Command {
             for (int i = 4; i < header.length; i++) {
                 String dstNs = header[i];
 
-                if ("client".equals(dstNs)) {
+                if ("officialClient".equals(dstNs)) {
                     clientNs = i - 3;
-                } else if ("server".equals(dstNs)) {
+                } else if ("officialServer".equals(dstNs)) {
                     serverNs = i - 3;
                 } else {
                     throw new RuntimeException("invalid dst namespace! only 'client' or 'server' is supported!");
