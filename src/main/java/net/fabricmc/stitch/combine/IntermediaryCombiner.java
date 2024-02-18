@@ -97,7 +97,7 @@ public class IntermediaryCombiner {
                 MethodEntry cMtd = (cCls == null) ? null : cCls.methods.get(sMtd.name + sMtd.desc);
 
                 if (cMtd == null) {
-                    fldw.accept(sCls.name, sMtd.name, sMtd.desc, "", sMtd.target);
+                    mtdw.accept(sCls.name, sMtd.name, sMtd.desc, "", sMtd.target);
                 }
             }
         }
