@@ -18,11 +18,16 @@ import net.fabricmc.stitch.representation.JarReader;
 public class IntermediaryUtil
 {
     public static void generateIntermediary(File jarFile, Collection<File> libs, File intermediaryFile, String[] options) throws IOException {
+        generateIntermediary(jarFile, null, libs, intermediaryFile, options);
+    }
+
+    public static void generateIntermediary(File jarFile, File nests, Collection<File> libs, File intermediaryFile, String[] options) throws IOException {
         MergedArgs args = parseOptions(new MergedArgs(), options);
 
         args.oldJarFile = null;
         args.oldLibs.clear();
         args.newJarFile = jarFile;
+        args.newNests = nests;
         args.newLibs.addAll(libs);
         args.oldIntermediaryFile = null;
         args.newIntermediaryFile = intermediaryFile;
@@ -37,15 +42,25 @@ public class IntermediaryUtil
     }
 
     public static void generateIntermediary(File clientJarFile, Collection<File> clientLibs, File serverJarFile, Collection<File> serverLibs, File intermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
+        generateIntermediary(clientJarFile, null, clientLibs, serverJarFile, null, serverLibs, intermediaryFile, matchesFile, invertMatches, options);
+    }
+
+    public static void generateIntermediary(File clientJarFile, File clientNests, Collection<File> clientLibs, File serverJarFile, File serverNests, Collection<File> serverLibs, File intermediaryFile, File matchesFile, String[] options) throws IOException {
+        generateIntermediary(clientJarFile, clientNests, clientLibs, serverJarFile, serverNests, serverLibs, intermediaryFile, matchesFile, false, options);
+    }
+
+    public static void generateIntermediary(File clientJarFile, File clientNests, Collection<File> clientLibs, File serverJarFile, File serverNests, Collection<File> serverLibs, File intermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
         SplitArgs args = parseOptions(new SplitArgs(), options);
 
         args.oldClientJarFile = null;
         args.oldClientLibs.clear();
         args.oldServerJarFile = null;
-        args.newServerLibs.clear();
+        args.oldServerLibs.clear();
         args.newClientJarFile = clientJarFile;
+        args.newClientNests = clientNests;
         args.newClientLibs.addAll(clientLibs);
         args.newServerJarFile = serverJarFile;
+        args.newServerNests = serverNests;
         args.newServerLibs.addAll(serverLibs);
         args.oldIntermediaryFile = null;
         args.newIntermediaryFile = intermediaryFile;
@@ -64,11 +79,20 @@ public class IntermediaryUtil
     }
 
     public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
+        updateIntermediary(oldJarFile, oldLibs, newJarFile, null, newLibs, oldIntermediaryFile, newIntermediaryFile, matchesFile, invertMatches, options);
+    }
+
+    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, File newNests, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, String[] options) throws IOException {
+        updateIntermediary(oldJarFile, oldLibs, newJarFile, newNests, newLibs, oldIntermediaryFile, newIntermediaryFile, matchesFile, false, options);
+    }
+
+    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, File newNests, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
         MergedArgs args = parseOptions(new MergedArgs(), options);
 
         args.oldJarFile = oldJarFile;
         args.oldLibs.addAll(oldLibs);
         args.newJarFile = newJarFile;
+        args.newNests = newNests;
         args.newLibs.addAll(newLibs);
         args.oldIntermediaryFile = oldIntermediaryFile;
         args.newIntermediaryFile = newIntermediaryFile;
@@ -83,15 +107,25 @@ public class IntermediaryUtil
     }
 
     public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newClientJarFile, Collection<File> newClientLibs, File newServerJarFile, Collection<File> newServerLibs, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
+        updateIntermediary(oldJarFile, oldLibs, newClientJarFile, null, newClientLibs, newServerJarFile, null, newServerLibs, oldIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, invertClientMatches, invertServerMatches, invertClientServerMatches, options);
+    }
+
+    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newClientJarFile, File newClientNests, Collection<File> newClientLibs, File newServerJarFile, File newServerNests, Collection<File> newServerLibs, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, String[] options) throws IOException {
+        updateIntermediary(oldJarFile, oldLibs, newClientJarFile, newClientNests, newClientLibs, newServerJarFile, newServerNests, newServerLibs, oldIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, false, false, false, options);
+    }
+
+    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newClientJarFile, File newClientNests, Collection<File> newClientLibs, File newServerJarFile, File newServerNests, Collection<File> newServerLibs, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
         SplitArgs args = parseOptions(new SplitArgs(), options);
 
         args.oldClientJarFile = oldJarFile;
         args.oldClientLibs.addAll(oldLibs);
         args.oldServerJarFile = oldJarFile;
-        args.newServerLibs.addAll(oldLibs);
+        args.oldServerLibs.addAll(oldLibs);
         args.newClientJarFile = newClientJarFile;
+        args.newClientNests = newClientNests;
         args.newClientLibs.addAll(newClientLibs);
         args.newServerJarFile = newServerJarFile;
+        args.newServerNests = newServerNests;
         args.newServerLibs.addAll(newServerLibs);
         args.oldIntermediaryFile = oldIntermediaryFile;
         args.newIntermediaryFile = newIntermediaryFile;
@@ -110,15 +144,25 @@ public class IntermediaryUtil
     }
 
     public static void updateIntermediary(File oldClientJarFile, Collection<File> oldClientLibs, File oldServerJarFile, Collection<File> oldServerLibs, File newClientJarFile, Collection<File> newClientLibs, File newServerJarFile, Collection<File> newServerLibs, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
+        updateIntermediary(oldClientJarFile, oldClientLibs, oldServerJarFile, oldServerLibs, newClientJarFile, null, newClientLibs, newServerJarFile, null, newServerLibs, oldIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, invertClientMatches, invertServerMatches, invertClientServerMatches, options);
+    }
+
+    public static void updateIntermediary(File oldClientJarFile, Collection<File> oldClientLibs, File oldServerJarFile, Collection<File> oldServerLibs, File newClientJarFile, File newClientNests, Collection<File> newClientLibs, File newServerJarFile, File newServerNests, Collection<File> newServerLibs, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, String[] options) throws IOException {
+        updateIntermediary(oldClientJarFile, oldClientLibs, oldServerJarFile, oldServerLibs, newClientJarFile, newClientNests, newClientLibs, newServerJarFile, newServerNests, newServerLibs, oldIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, false, false, false, options);
+    }
+
+    public static void updateIntermediary(File oldClientJarFile, Collection<File> oldClientLibs, File oldServerJarFile, Collection<File> oldServerLibs, File newClientJarFile, File newClientNests, Collection<File> newClientLibs, File newServerJarFile, File newServerNests, Collection<File> newServerLibs, File oldIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
         SplitArgs args = parseOptions(new SplitArgs(), options);
 
         args.oldClientJarFile = oldClientJarFile;
         args.oldClientLibs.addAll(oldClientLibs);
         args.oldServerJarFile = oldServerJarFile;
-        args.newServerLibs.addAll(oldServerLibs);
+        args.oldServerLibs.addAll(oldServerLibs);
         args.newClientJarFile = newClientJarFile;
+        args.newClientNests = newClientNests;
         args.newClientLibs.addAll(newClientLibs);
         args.newServerJarFile = newServerJarFile;
+        args.newServerNests = newServerNests;
         args.newServerLibs.addAll(newServerLibs);
         args.oldIntermediaryFile = oldIntermediaryFile;
         args.newIntermediaryFile = newIntermediaryFile;
@@ -141,7 +185,7 @@ public class IntermediaryUtil
         if (args.oldJarFile != null) {
             storageOld = new Classpath(args.oldJarFile, args.oldLibs);
         }
-        Classpath storageNew = new Classpath(args.newJarFile, args.newLibs);
+        Classpath storageNew = new Classpath(args.newJarFile, args.newNests, args.newLibs);
 
         try {
             if (storageOld != null) {
@@ -181,8 +225,8 @@ public class IntermediaryUtil
                 storageServerOld = new Classpath(args.oldServerJarFile, args.oldServerLibs);
             }
         }
-        Classpath storageClientNew = new Classpath(args.newClientJarFile, args.newClientLibs);
-        Classpath storageServerNew = new Classpath(args.newServerJarFile, args.newServerLibs);
+        Classpath storageClientNew = new Classpath(args.newClientJarFile, args.newClientNests, args.newClientLibs);
+        Classpath storageServerNew = new Classpath(args.newServerJarFile, args.newServerNests, args.newServerLibs);
 
         try {
             if (storageClientOld != null) {
@@ -290,6 +334,7 @@ public class IntermediaryUtil
         File oldJarFile;
         List<File> oldLibs = new ArrayList<>();
         File newJarFile;
+        File newNests;
         List<File> newLibs = new ArrayList<>();
         File oldIntermediaryFile;
         File newIntermediaryFile;
@@ -305,8 +350,10 @@ public class IntermediaryUtil
         File oldServerJarFile;
         List<File> oldServerLibs = new ArrayList<>();
         File newClientJarFile;
+        File newClientNests;
         List<File> newClientLibs = new ArrayList<>();
         File newServerJarFile;
+        File newServerNests;
         List<File> newServerLibs = new ArrayList<>();
         File oldIntermediaryFile;
         File newIntermediaryFile;

@@ -34,6 +34,7 @@ import org.objectweb.asm.MethodVisitor;
 
 import net.fabricmc.stitch.representation.JarClassEntry.ClassEntryPopulator;
 import net.fabricmc.stitch.util.StitchUtil;
+import net.ornithemc.nester.nest.Nest;
 
 public class JarReader
 {
@@ -51,6 +52,26 @@ public class JarReader
         // Stage 1: read .JAR class/field/method meta
         this.readJar(this.classpath.getJar());
         System.err.println("Read " + this.classpath.getJar().getAllClasses().size() + " (" + this.classpath.getJar().getClasses().size() + ") classes.");
+        int missing = 0;
+        for (Nest nest : this.classpath.getNests()) {
+            String cls = nest.enclClassName;
+
+            if (this.classpath.getJar().getClass(cls, null) == null) {
+                ClassEntryPopulator populator = new ClassEntryPopulator();
+
+                populator.access = 0;
+                populator.name = cls;
+                populator.superclass = "java/lang/Object";
+
+                this.classpath.getJar().getClass(populator.name, populator);
+                System.err.println("Created " + cls);
+
+                missing++;
+            }
+        }
+        if (missing > 0) {
+            System.err.println("Read " + missing + " missing classes from nests");
+        }
 
         // Stage 2: read classpath class/method meta
         for (JarRootEntry lib : this.classpath.classpath) {

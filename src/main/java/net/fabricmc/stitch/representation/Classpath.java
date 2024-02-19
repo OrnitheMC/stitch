@@ -6,18 +6,30 @@ import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import net.ornithemc.nester.nest.Nests;
+
 public class Classpath {
 
     private static JarRootEntry jre;
 
     final JarRootEntry[] classpath;
+    final Nests nests;
 
     public Classpath(File jar, File... libs) throws IOException {
-        this(jar, Arrays.asList(libs));
+        this(jar, null, libs);
+    }
+
+    public Classpath(File jar, File nests, File... libs) throws IOException {
+        this(jar, nests, Arrays.asList(libs));
     }
 
     public Classpath(File jar, Collection<File> libs) throws IOException {
+        this(jar, null, libs);
+    }
+
+    public Classpath(File jar, File nests, Collection<File> libs) throws IOException {
         this.classpath = new JarRootEntry[libs.size() + 1];
+        this.nests = nests == null ? Nests.empty() : Nests.of(nests.toPath());
 
         int i = 0;
         this.classpath[i++] = new JarRootEntry(jar);
@@ -27,7 +39,12 @@ public class Classpath {
     }
 
     public Classpath(JarRootEntry jar, JarRootEntry... libs) {
+        this(jar, Nests.empty(), libs);
+    }
+
+    public Classpath(JarRootEntry jar, Nests nests, JarRootEntry... libs) {
         this.classpath = new JarRootEntry[libs.length + 1];
+        this.nests = nests;
 
         int i = 0;
         this.classpath[i++] = jar;
@@ -50,6 +67,10 @@ public class Classpath {
         }
 
         return jre;
+    }
+
+    public Nests getNests() {
+        return nests;
     }
 
     public JarClassEntry getClass(String name) {
