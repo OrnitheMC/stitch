@@ -62,6 +62,7 @@ public class JarReader
                 populator.access = 0;
                 populator.name = cls;
                 populator.superclass = "java/lang/Object";
+                populator.interfaces = new String[0];
 
                 this.classpath.getJar().getClass(populator.name, populator);
                 System.err.println("Created " + cls);
