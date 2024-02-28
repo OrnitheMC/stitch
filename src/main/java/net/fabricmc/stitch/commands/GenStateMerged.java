@@ -281,16 +281,26 @@ public class GenStateMerged extends GenState
                 if (cname == null && newToOld != null) {
                     String findName = newToOld.getClass(fullName);
                     if (findName != null) {
-                        // similar to above, the names we generate follow the convention for inner classes
-                        findName = oldToIntermediary.getClass(findName);
-                        if (findName != null) {
-                            String[] nr = fullName.split("\\$");
-                            String[] or = findName.split("\\$");
-                            if (or.length > 1) {
-                                cname = stripLocalClassPrefix(or[or.length - 1]);
-                            } else {
-                                cname = stripPackageName(findName);
+                        if (isObfuscated(findName)) {
+                            // similar to above, the names we generate follow the convention for inner classes
+                            findName = oldToIntermediary.getClass(findName);
+                            if (findName != null) {
+                                String[] nr = fullName.split("\\$");
+                                String[] or = findName.split("\\$");
+                                if (or.length > 1) {
+                                    cname = stripLocalClassPrefix(or[or.length - 1]);
+                                } else {
+                                    cname = stripPackageName(findName);
+                                }
                             }
+                        } else {
+                            int i = findName.lastIndexOf('$');
+                            if (i < 0) {
+                                cname = stripPackageName(findName);
+                            } else {
+                                cname = stripLocalClassPrefix(findName.substring(i + 1));
+                            }
+                            translatedPrefix = findName.substring(0, findName.length() - cname.length());
                         }
                     }
                 }

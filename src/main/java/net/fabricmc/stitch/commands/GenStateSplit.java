@@ -521,17 +521,23 @@ public class GenStateSplit extends GenState
             } else {
                 iname = null;
 
-                String icname = (cc == null) ? null : inheritClassName(clientName, clientNewToOld, clientOldToIntermediary);
-                String isname = (sc == null) ? null : inheritClassName(serverName, serverNewToOld, serverOldToIntermediary);
+                Pair<String, String> icname = (cc == null) ? null : inheritClassName(clientName, clientNewToOld, clientOldToIntermediary);
+                Pair<String, String> isname = (sc == null) ? null : inheritClassName(serverName, serverNewToOld, serverOldToIntermediary);
 
                 if (icname != null && isname != null && !icname.equals(isname)) {
-                    throw new IllegalStateException("illegal name inheritance: client[" + clientName + " -> " + icname + "], server[" + serverName + " -> " + isname + "]");
+                    throw new IllegalStateException("illegal name inheritance: client[" + clientName + " -> " + icname.getLeft() + icname.getRight() + "], server[" + serverName + " -> " + isname.getLeft() + isname.getRight() + "]");
                 }
                 if (icname != null) {
-                    iname = icname;
+                    iname = icname.getRight();
+                    if (icname.getLeft() != null) {
+                        translatedPrefix = icname.getLeft();
+                    }
                 }
                 if (isname != null) {
-                    iname = isname;
+                    iname = isname.getRight();
+                    if (isname.getLeft() != null) {
+                        translatedPrefix = isname.getLeft();
+                    }
                 }
 
                 if (iname == null) {
@@ -594,19 +600,30 @@ public class GenStateSplit extends GenState
         //}
     }
 
-    private String inheritClassName(String fullName, GenMap newToOld, GenMap oldToIntermediary) {
+    private Pair<String, String> inheritClassName(String fullName, GenMap newToOld, GenMap oldToIntermediary) {
         String findName = newToOld.getClass(fullName);
         if (findName != null) {
-            // similar to above, the names we generate follow the convention for inner classes
-            findName = oldToIntermediary.getClass(findName);
-            if (findName != null) {
-                String[] nr = fullName.split("\\$");
-                String[] or = findName.split("\\$");
-                if (or.length > 1) {
-                    return stripLocalClassPrefix(or[or.length - 1]);
-                } else {
-                    return stripPackageName(findName);
+            if (isObfuscated(findName)) {
+                // similar to above, the names we generate follow the convention for inner classes
+                findName = oldToIntermediary.getClass(findName);
+                if (findName != null) {
+                    String[] nr = fullName.split("\\$");
+                    String[] or = findName.split("\\$");
+                    if (or.length > 1) {
+                        return Pair.of(null, stripLocalClassPrefix(or[or.length - 1]));
+                    } else {
+                        return Pair.of(null, stripPackageName(findName));
+                    }
                 }
+            } else {
+                String cname;
+                int i = findName.lastIndexOf('$');
+                if (i < 0) {
+                    cname = stripPackageName(findName);
+                } else {
+                    cname = stripLocalClassPrefix(findName.substring(i + 1));
+                }
+                return Pair.of(findName.substring(0, findName.length() - cname.length()), cname);
             }
         }
 
