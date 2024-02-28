@@ -248,7 +248,7 @@ public class GenStateMerged extends GenState
             }
         }
 
-        if (!isObfuscated(fullName)) {
+        if ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : !isObfuscated(fullName)) {
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
@@ -281,26 +281,21 @@ public class GenStateMerged extends GenState
                 if (cname == null && newToOld != null) {
                     String findName = newToOld.getClass(fullName);
                     if (findName != null) {
-                        if (isObfuscated(findName)) {
-                            // similar to above, the names we generate follow the convention for inner classes
-                            findName = oldToIntermediary.getClass(findName);
-                            if (findName != null) {
-                                String[] nr = fullName.split("\\$");
-                                String[] or = findName.split("\\$");
-                                if (or.length > 1) {
-                                    cname = stripLocalClassPrefix(or[or.length - 1]);
-                                } else {
-                                    cname = stripPackageName(findName);
+                        // similar to above, the names we generate follow the convention for inner classes
+                        findName = oldToIntermediary.getClass(findName);
+                        if (findName != null) {
+                            String[] nr = fullName.split("\\$");
+                            String[] or = findName.split("\\$");
+                            if (or.length > 1) {
+                                cname = stripLocalClassPrefix(or[or.length - 1]);
+                            } else {
+                                cname = stripPackageName(findName);
+                                if (!cname.startsWith("C_")) {
+                                    // not a name we generated, thus an unobfuscated name!
+                                    // then we inherit not just the name but the package too
+                                    translatedPrefix = findName.substring(0, findName.length() - cname.length());
                                 }
                             }
-                        } else {
-                            int i = findName.lastIndexOf('$');
-                            if (i < 0) {
-                                cname = stripPackageName(findName);
-                            } else {
-                                cname = stripLocalClassPrefix(findName.substring(i + 1));
-                            }
-                            translatedPrefix = findName.substring(0, findName.length() - cname.length());
                         }
                     }
                 }

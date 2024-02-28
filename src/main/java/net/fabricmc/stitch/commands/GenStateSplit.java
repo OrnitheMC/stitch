@@ -478,8 +478,8 @@ public class GenStateSplit extends GenState
             throw new RuntimeException("generating intermediary for split jars with inner class attributes is not supported at this time!");
         }
 
-        boolean cunobf = clientName != null && !isObfuscated(cc);
-        boolean sunobf = serverName != null && !isObfuscated(sc);
+        boolean cunobf = clientName != null && ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : !isObfuscated(clientName));
+        boolean sunobf = serverName != null && ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : !isObfuscated(serverName));
 
         if (cunobf || sunobf) {
             if (cunobf && sunobf && !clientName.equals(serverName)) {
@@ -603,27 +603,23 @@ public class GenStateSplit extends GenState
     private Pair<String, String> inheritClassName(String fullName, GenMap newToOld, GenMap oldToIntermediary) {
         String findName = newToOld.getClass(fullName);
         if (findName != null) {
-            if (isObfuscated(findName)) {
-                // similar to above, the names we generate follow the convention for inner classes
-                findName = oldToIntermediary.getClass(findName);
-                if (findName != null) {
-                    String[] nr = fullName.split("\\$");
-                    String[] or = findName.split("\\$");
-                    if (or.length > 1) {
-                        return Pair.of(null, stripLocalClassPrefix(or[or.length - 1]));
+            // similar to above, the names we generate follow the convention for inner classes
+            findName = oldToIntermediary.getClass(findName);
+            if (findName != null) {
+                String[] nr = fullName.split("\\$");
+                String[] or = findName.split("\\$");
+                if (or.length > 1) {
+                    return Pair.of(null, stripLocalClassPrefix(or[or.length - 1]));
+                } else {
+                    String cname = stripPackageName(findName);
+                    if (cname.startsWith("C_")) {
+                        return Pair.of(null, cname);
                     } else {
-                        return Pair.of(null, stripPackageName(findName));
+                        // not a name we generated, thus an unobfuscated name!
+                        // then we inherit not just the name but the package too
+                        return Pair.of(findName.substring(0, findName.length() - cname.length()), cname);
                     }
                 }
-            } else {
-                String cname;
-                int i = findName.lastIndexOf('$');
-                if (i < 0) {
-                    cname = stripPackageName(findName);
-                } else {
-                    cname = stripLocalClassPrefix(findName.substring(i + 1));
-                }
-                return Pair.of(findName.substring(0, findName.length() - cname.length()), cname);
             }
         }
 
