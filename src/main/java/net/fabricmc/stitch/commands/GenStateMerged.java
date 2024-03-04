@@ -282,9 +282,13 @@ public class GenStateMerged extends GenState
                             String[] or = findName.split("\\$");
                             if (or.length > 1) {
                                 cname = stripLocalClassPrefix(or[or.length - 1]);
+                                if (nr.length == 1 && Character.isDigit(cname.charAt(0))) {
+                                    // old class is anonymous, but new class is top level
+                                    cname = "C_" + cname;
+                                }
                             } else {
                                 cname = stripPackageName(findName);
-                                if (!cname.startsWith("C_")) {
+                                if (nr.length == 1 && !cname.startsWith("C_")) {
                                     // not a name we generated, thus an unobfuscated name!
                                     // then we inherit not just the name but the package too
                                     translatedPrefix = findName.substring(0, findName.length() - cname.length());
