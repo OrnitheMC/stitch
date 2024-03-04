@@ -39,9 +39,7 @@ public class GenState
     }
 
     public static boolean isMappedClass(JarClassEntry c) {
-        // if an anonymous class does not follow the convention
-        // for inner class names, we give it a new new anyway
-        return !c.isAnonymous() || !c.getName().startsWith(c.getEnclosingClassName() + "$");
+        return true;
     }
 
     public static boolean isMappedField(JarFieldEntry f) {

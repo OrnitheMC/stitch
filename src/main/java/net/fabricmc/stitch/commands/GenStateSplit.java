@@ -478,8 +478,8 @@ public class GenStateSplit extends GenState
             throw new RuntimeException("generating intermediary for split jars with inner class attributes is not supported at this time!");
         }
 
-        boolean cunobf = clientName != null && ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : !isObfuscated(clientName));
-        boolean sunobf = serverName != null && ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : !isObfuscated(serverName));
+        boolean cunobf = clientName != null && ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (cc.isAnonymous() || !isObfuscated(clientName)));
+        boolean sunobf = serverName != null && ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (sc.isAnonymous() || !isObfuscated(serverName)));
 
         if (cunobf || sunobf) {
             if (cunobf && sunobf && !clientName.equals(serverName)) {
@@ -497,26 +497,14 @@ public class GenStateSplit extends GenState
                     throw new RuntimeException("conflicting unmapped class names (client, server) -> new: (" + clientName + ", " + serverName + ")");
                 }
                 if (cc != null) {
-                    if (cc.isAnonymous()) {
-                        // anonymous classes are only unmapped if their name
-                        // follows the standard $ convention
-                        iname = clientName.substring(cc.getEnclosingClassName().length() + 1);
-                    } else {
-                        // throw exception in case the impl of isMappedClass
-                        // changes but we forget to deal with it here
-                        throw new IllegalStateException("don't know what to do with client class " + clientName);
-                    }
+                    // throw exception in case the impl of isMappedClass
+                    // changes but we forget to deal with it here
+                    throw new IllegalStateException("don't know what to do with client class " + clientName);
                 }
                 if (sc != null) {
-                    if (sc.isAnonymous()) {
-                        // anonymous classes are only unmapped if their name
-                        // follows the standard $ convention
-                        iname = serverName.substring(sc.getEnclosingClassName().length() + 1);
-                    } else {
-                        // throw exception in case the impl of isMappedClass
-                        // changes but we forget to deal with it here
-                        throw new IllegalStateException("don't know what to do with server class " + serverName);
-                    }
+                    // throw exception in case the impl of isMappedClass
+                    // changes but we forget to deal with it here
+                    throw new IllegalStateException("don't know what to do with server class " + serverName);
                 }
             } else {
                 iname = null;

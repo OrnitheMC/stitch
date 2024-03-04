@@ -248,19 +248,13 @@ public class GenStateMerged extends GenState
             }
         }
 
-        if ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : !isObfuscated(fullName)) {
+        if ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && !isObfuscated(fullName))) {
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
-                if (c.isAnonymous()) {
-                    // anonymous classes are only unmapped if their name
-                    // follows the standard $ convention
-                    cname = fullName.substring(c.getEnclosingClassName().length() + 1);
-                } else {
-                    // throw exception in case the impl of isMappedClass
-                    // changes but we forget to deal with it here
-                    throw new IllegalStateException("don't know what to do with class " + fullName);
-                }
+                // throw exception in case the impl of isMappedClass
+                // changes but we forget to deal with it here
+                throw new IllegalStateException("don't know what to do with class " + fullName);
             } else {
                 cname = null;
 
@@ -302,6 +296,13 @@ public class GenStateMerged extends GenState
 
                 if (cname == null) {
                     cname = next(c, "C");
+                }
+                // generating anonymous class names like this keeps them
+                // more consistent across versions while keeping the
+                // convention of making them a number, which makes some
+                // decompilers less confused
+                if (c.isAnonymous() && cname.startsWith("C_")) {
+                    cname = cname.substring(2);
                 }
             }
         }
