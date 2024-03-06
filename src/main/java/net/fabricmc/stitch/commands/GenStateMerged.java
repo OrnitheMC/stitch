@@ -248,7 +248,7 @@ public class GenStateMerged extends GenState
             }
         }
 
-        if ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && !isObfuscated(fullName))) {
+        if ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && fullName.indexOf('$') < 0 && !isObfuscated(fullName))) {
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
@@ -282,9 +282,12 @@ public class GenStateMerged extends GenState
                             String[] or = findName.split("\\$");
                             if (or.length > 1) {
                                 cname = stripLocalClassPrefix(or[or.length - 1]);
-                                if (nr.length == 1 && Character.isDigit(cname.charAt(0))) {
-                                    // old class is anonymous, but new class is top level
-                                    cname = "C_" + cname;
+                                if (nr.length == 1) {
+                                    // new class is top level
+                                    JarClassEntry findEntry = storageOld.getClass(findName);
+                                    if (findEntry.isAnonymous()) {
+                                        cname = "C_" + cname;
+                                    }
                                 }
                             } else {
                                 cname = stripPackageName(findName);

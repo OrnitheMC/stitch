@@ -478,8 +478,8 @@ public class GenStateSplit extends GenState
             throw new RuntimeException("generating intermediary for split jars with inner class attributes is not supported at this time!");
         }
 
-        boolean cunobf = clientName != null && ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (cc.isAnonymous() || !isObfuscated(clientName)));
-        boolean sunobf = serverName != null && ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (sc.isAnonymous() || !isObfuscated(serverName)));
+        boolean cunobf = clientName != null && ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (!cc.isAnonymous() && clientName.indexOf('$') < 0 && !isObfuscated(clientName)));
+        boolean sunobf = serverName != null && ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (!sc.isAnonymous() && serverName.indexOf('$') < 0 && !isObfuscated(serverName)));
 
         if (cunobf || sunobf) {
             if (cunobf && sunobf && !clientName.equals(serverName)) {
