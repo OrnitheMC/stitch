@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 
 public class JarClassEntry extends AbstractJarEntry
 {
+    private final JarRootEntry jar;
+
     final Map<String, JarClassEntry> innerClasses;
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
@@ -45,6 +47,8 @@ public class JarClassEntry extends AbstractJarEntry
 
     protected JarClassEntry(String name, JarRootEntry parentJar) {
         super(name, "");
+
+        this.jar = parentJar;
 
         this.innerClasses = new TreeMap<>(Comparator.naturalOrder());
         this.fields = new TreeMap<>(Comparator.naturalOrder());
@@ -75,12 +79,18 @@ public class JarClassEntry extends AbstractJarEntry
         JarClassEntry superEntry = storage.findClass(superclass);
         if (superEntry != null) {
             superEntry.subclasses.add(name);
+            if (superEntry.jar != storage.getJar()) {
+                superEntry.populateParents(storage);
+            }
         }
 
         for (int i = 0; i < interfaces.size(); i++) {
             JarClassEntry itf = storage.findClass(interfaces.get(i));
             if (itf != null) {
                 itf.implementers.add(name);
+                if (itf.jar != storage.getJar()) {
+                    itf.populateParents(storage);
+                }
             }
         }
     }

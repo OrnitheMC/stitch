@@ -83,9 +83,7 @@ public class JarReader
         System.err.println("Read libraries.");
 
         // Stage 2: find subclasses
-        for (JarRootEntry jar : this.classpath.classpath) {
-            jar.getAllClasses().forEach((c) -> c.populateParents(this.classpath));
-        }
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateParents(this.classpath));
         System.err.println("Populated subclass entries.");
 
         // Stage 3: find inner classes
