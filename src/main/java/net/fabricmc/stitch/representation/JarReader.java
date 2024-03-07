@@ -83,7 +83,9 @@ public class JarReader
         System.err.println("Read libraries.");
 
         // Stage 2: find subclasses
-        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateParents(this.classpath));
+        for (JarRootEntry jar : this.classpath.classpath) {
+            jar.getAllClasses().forEach((c) -> c.populateParents(this.classpath));
+        }
         System.err.println("Populated subclass entries.");
 
         // Stage 3: find inner classes
@@ -132,7 +134,7 @@ public class JarReader
                         @Override
                         public void visit(final int version, final int access, final String name, final String signature,
                                           final String superName, final String[] interfaces) {
-                            startedAt = System.nanoTime();
+//                            startedAt = System.nanoTime();
                             populator = new ClassEntryPopulator();
 
                             populator.access = access;
@@ -193,8 +195,8 @@ public class JarReader
                                 classEntry.methods.put(methodEntry.getKey(), methodEntry);
                             }
 
-                            long timeSpan = (System.nanoTime() - startedAt) / 1000;
-                            System.err.println("Loaded " + classEntry.getKey() + " in " + timeSpan + "μs");
+//                            long timeSpan = (System.nanoTime() - startedAt) / 1000;
+//                            System.err.println("Loaded " + classEntry.getKey() + " in " + timeSpan + "μs");
 
                             super.visitEnd();
                         }
