@@ -76,11 +76,14 @@ public class JarClassEntry extends AbstractJarEntry
     }
 
     protected void populateParents(Classpath storage) {
-        JarClassEntry superEntry = storage.findClass(superclass);
-        if (superEntry != null) {
-            superEntry.subclasses.add(name);
-            if (superEntry.jar != storage.getJar()) {
-                superEntry.populateParents(storage);
+        // java/lang/Object does not have a super class
+        if (superclass != null) {
+            JarClassEntry superEntry = storage.findClass(superclass);
+            if (superEntry != null) {
+                superEntry.subclasses.add(name);
+                if (superEntry.jar != storage.getJar()) {
+                    superEntry.populateParents(storage);
+                }
             }
         }
 
