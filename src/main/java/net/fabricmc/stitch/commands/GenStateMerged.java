@@ -275,17 +275,18 @@ public class GenStateMerged extends GenState
                 if (cname == null && newToOld != null) {
                     String findName = newToOld.getClass(fullName);
                     if (findName != null) {
-                        // similar to above, the names we generate follow the convention for inner classes
+                        String oldName = findName;
                         findName = oldToIntermediary.getClass(findName);
                         if (findName != null) {
+                            // similar to above, the names we generate follow the convention for inner classes
                             String[] nr = fullName.split("\\$");
                             String[] or = findName.split("\\$");
                             if (or.length > 1) {
                                 cname = stripLocalClassPrefix(or[or.length - 1]);
                                 if (nr.length == 1) {
                                     // new class is top level
-                                    JarClassEntry findEntry = storageOld.getClass(findName);
-                                    if (findEntry.isAnonymous()) {
+                                    JarClassEntry findEntry = storageOld.getClass(oldName);
+                                    if (findEntry != null && findEntry.isAnonymous()) {
                                         cname = "C_" + cname;
                                     }
                                 }
