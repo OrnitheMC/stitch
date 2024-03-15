@@ -321,7 +321,7 @@ public class JarReader
         String desc = "";
         while (c.isArray()) {
             desc += "[";
-            c = c.componentType();
+            c = c.getComponentType();
         }
         if (c.isPrimitive()) {
             if (c == Integer.TYPE) {

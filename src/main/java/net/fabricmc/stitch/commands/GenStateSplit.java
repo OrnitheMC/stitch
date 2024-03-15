@@ -29,6 +29,7 @@ import org.objectweb.asm.Opcodes;
 import java.io.*;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class GenStateSplit extends GenState
 {
@@ -165,7 +166,7 @@ public class GenStateSplit extends GenState
             return next(cm, sm, "m");
         }
         if (cms.isEmpty() || sms.isEmpty()) {
-            throw new RuntimeException("incompatible method inheritance: client[" + cm + "](" + String.join(", ", cms.stream().map(Object::toString).toList()) + ") - server[" + sm + "](" + String.join(", ", sms.stream().map(Object::toString).toList()) + ")");
+            throw new RuntimeException("incompatible method inheritance: client[" + cm + "](" + String.join(", ", cms.stream().map(Object::toString).collect(Collectors.toList())) + ") - server[" + sm + "](" + String.join(", ", sms.stream().map(Object::toString).collect(Collectors.toList())) + ")");
         }
 
         Iterator<JarMethodEntry> cit = cms.iterator();

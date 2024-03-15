@@ -273,10 +273,10 @@ public class IntermediaryUtil
         }
         args.salt = ByteBuffer.allocate(256);
         if (args.clientHash != null) {
-            args.salt.put(args.salt.position(), args.clientHash.getBytes(StandardCharsets.UTF_8));
+            args.salt.put(args.clientHash.getBytes(StandardCharsets.UTF_8));
         }
         if (args.serverHash != null) {
-            args.salt.put(args.salt.position(), args.serverHash.getBytes(StandardCharsets.UTF_8));
+            args.salt.put(args.serverHash.getBytes(StandardCharsets.UTF_8));
         }
     }
 

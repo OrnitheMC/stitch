@@ -57,13 +57,13 @@ public class CommandSplitTinyV2 extends Command {
             throw new IllegalArgumentException("input and output files cannot be the  same!");
         }
 
-        if (args[0].isBlank()  || "-".equals(args[0]) || !Files.exists(input)) {
+        if (args[0].isEmpty()  || "-".equals(args[0]) || !Files.exists(input)) {
             throw new RuntimeException("input cannot be empty!");
         }
-        if (args[1].isBlank() || "-".equals(args[1]) || !Files.isWritable(outputC)) {
+        if (args[1].isEmpty() || "-".equals(args[1]) || !Files.isWritable(outputC)) {
             outputC = null;
         }
-        if (args[2].isBlank() || "-".equals(args[2]) || !Files.isWritable(outputS)) {
+        if (args[2].isEmpty() || "-".equals(args[2]) || !Files.isWritable(outputS)) {
             outputS = null;
         }
 
@@ -199,7 +199,7 @@ public class CommandSplitTinyV2 extends Command {
                     }
                 }
                 for (int i = indents; i < parts.length; i++) {
-                    if (parts[i].isBlank()) {
+                    if (parts[i].isEmpty()) {
                         parts[i] = null;
                     }
                 }

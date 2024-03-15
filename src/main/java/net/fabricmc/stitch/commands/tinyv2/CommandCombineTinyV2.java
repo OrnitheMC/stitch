@@ -58,11 +58,11 @@ public class CommandCombineTinyV2 extends Command {
 
         IntermediaryCombiner combiner = new IntermediaryCombiner();
 
-        if (!args[0].isBlank() && !"-".equals(args[0]) && Files.exists(inputC)) {
+        if (!args[0].isEmpty() && !"-".equals(args[0]) && Files.exists(inputC)) {
             System.out.println("Reading " + inputC);
             combiner.readClient(inputC, this::readInput);
         }
-        if (!args[1].isBlank() && !"-".equals(args[1]) && Files.exists(inputS)) {
+        if (!args[1].isEmpty() && !"-".equals(args[1]) && Files.exists(inputS)) {
             System.out.println("Reading " + inputS);
             combiner.readServer(inputS, this::readInput);
         }
