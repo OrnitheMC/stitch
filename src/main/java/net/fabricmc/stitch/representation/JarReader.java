@@ -224,8 +224,6 @@ public class JarReader
             ZipEntry entry = zip.getEntry(name + ".class");
 
             if (entry != null) {
-                JarClassEntry classEntry = null;
-
                 ClassReader reader = new ClassReader(zip.getInputStream(entry));
                 ClassVisitor visitor = new ClassVisitor(StitchUtil.ASM_VERSION, null)
                 {
@@ -268,7 +266,7 @@ public class JarReader
                 };
                 reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
-                return classEntry;
+                return jar.getClass(name, null);
             }
 
             return null;
