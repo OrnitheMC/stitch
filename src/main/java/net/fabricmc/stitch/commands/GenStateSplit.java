@@ -513,7 +513,7 @@ public class GenStateSplit extends GenState
                 Pair<String, String> isname = (sc == null) ? null : inheritClassName(serverName, serverNewToOld, serverOldToIntermediary);
 
                 if (icname != null && isname != null && !icname.equals(isname)) {
-                    throw new IllegalStateException("illegal name inheritance: client[" + clientName + " -> " + icname.getLeft() + icname.getRight() + "], server[" + serverName + " -> " + isname.getLeft() + isname.getRight() + "]");
+                    throw new IllegalStateException("illegal name inheritance: client[" + clientName + " -> " + (icname.getLeft() == null ? "" : icname.getLeft()) + icname.getRight() + "], server[" + serverName + " -> " + (isname.getLeft() == null ? "" : isname.getLeft()) + isname.getRight() + "]");
                 }
                 if (icname != null) {
                     iname = icname.getRight();
