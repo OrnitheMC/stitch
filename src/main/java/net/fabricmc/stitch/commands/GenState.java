@@ -51,11 +51,17 @@ public class GenState
     }
 
     public static boolean isMappedMethod(Classpath storage, JarClassEntry c, JarMethodEntry m) {
-        return isMappedMethodName(m.getName()) && m.isSource(storage, c);
+        return isMappedMethodName(m.getName()) && m.isSource(storage, c) && !isEnumMethod(storage, c, m);
     }
 
     public static boolean isMappedMethodName(String name) {
         return name.charAt(0) != '<' && !"main".equals(name) && !"getClientModName".equals(name) && !"getServerModName".equals(name); // make sure only constructors and main methods are not remapped
+    }
+
+    public static boolean isEnumMethod(Classpath storage, JarClassEntry c, JarMethodEntry m) {
+        return Access.isEnum(c.getAccess()) &&
+                ("values".equals(m.getName()) && ("()[L" + c.getName() + ";").equals(m.getDescriptor()) ||
+                "valueOf".equals(m.getName()) && ("(Ljava/lang/String;)L" + c.getName() + ";").equals(m.getDescriptor()));
     }
 
     public boolean isObfuscated(JarClassEntry c) {
