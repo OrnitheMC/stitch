@@ -449,8 +449,8 @@ public class GenStateSplit extends GenState
         String cname = null;
         String sname = null;
         if (mName == null) {
-            cname = (cm == null || cm.getName().startsWith("<") || !cm.isSource(storageClient, cc)) ? null : cm.getName();
-            sname = (sm == null || sm.getName().startsWith("<") || !sm.isSource(storageServer, sc)) ? null : sm.getName();
+            cname = (cm == null || cm.getName().startsWith("<") || !cm.isSource(storageClient, cc) || isEnumMethod(storageClient, cc, cm)) ? null : cm.getName();
+            sname = (sm == null || sm.getName().startsWith("<") || !sm.isSource(storageServer, sc) || isEnumMethod(storageServer, sc, sm)) ? null : sm.getName();
 
             if (cname != null && sname != null && !cname.equals(sname)) {
                 throw new RuntimeException("conflicting unmapped method names: client[" + cc.getName() + "." + cm.getName() + cm.getDescriptor() + " -> " + cname + "], server[" + sc.getName() + "." + sm.getName() + sm.getDescriptor() + " -> " + sname + "]");

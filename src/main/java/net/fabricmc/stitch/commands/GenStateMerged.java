@@ -334,7 +334,7 @@ public class GenStateMerged extends GenState
         for (JarMethodEntry m : c.getMethods()) {
             String mName = getMethodName(storage, storageOld, c, m);
             if (mName == null) {
-                if (!m.getName().startsWith("<") && m.isSource(storage, c)) {
+                if (!m.getName().startsWith("<") && m.isSource(storage, c) && !isEnumMethod(storage, c, m)) {
                     mName = m.getName();
                 }
             }
