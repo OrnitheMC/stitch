@@ -213,6 +213,8 @@ public class IntermediaryUtil
 
         Classpath storageClientOld = null;
         Classpath storageServerOld = null;
+        Classpath storageClientNew = null;
+        Classpath storageServerNew = null;
         if (args.oldClientJarFile == args.oldServerJarFile) {
             if (args.oldClientJarFile != null) {
                 storageClientOld = storageServerOld = new Classpath(args.oldClientJarFile, args.oldClientLibs);
@@ -225,8 +227,12 @@ public class IntermediaryUtil
                 storageServerOld = new Classpath(args.oldServerJarFile, args.oldServerLibs);
             }
         }
-        Classpath storageClientNew = new Classpath(args.newClientJarFile, args.newClientNests, args.newClientLibs);
-        Classpath storageServerNew = new Classpath(args.newServerJarFile, args.newServerNests, args.newServerLibs);
+        if (args.newClientJarFile != null) {
+            storageClientNew = new Classpath(args.newClientJarFile, args.newClientNests, args.newClientLibs);
+        }
+        if (args.newServerJarFile != null) {
+            storageServerNew = new Classpath(args.newServerJarFile, args.newServerNests, args.newServerLibs);
+        }
 
         try {
             if (storageClientOld != null) {
@@ -235,8 +241,12 @@ public class IntermediaryUtil
             if (storageServerOld != null && storageServerOld != storageClientOld) {
                 new JarReader(storageServerOld).apply();
             }
-            new JarReader(storageClientNew).apply(args.salt.array());
-            new JarReader(storageServerNew).apply(args.salt.array());
+            if (storageClientNew != null) {
+                new JarReader(storageClientNew).apply(args.salt.array());
+            }
+            if (storageServerNew != null) {
+                new JarReader(storageServerNew).apply(args.salt.array());
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
