@@ -669,11 +669,19 @@ public class GenStateSplit extends GenState
             throw new IOException(e);
         }
 
+        prepareUpdateFromSplit(client, server, clientMatches, serverMatches, clientServerMatches, invertClientMatches, invertServerMatches, invertClientServerMatches);
+
+        client.delete();
+        server.delete();
+        tmp.delete();
+    }
+
+    public void prepareUpdateFromSplit(File clientMappings, File serverMappings, File clientMatches, File serverMatches, File clientServerMatches, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches) throws IOException {
         if (clientMatches != null) {
             clientNewToOld = new GenMap();
             clientOldToIntermediary = new GenMap();
 
-            try (FileInputStream inputStream = new FileInputStream(client)) {
+            try (FileInputStream inputStream = new FileInputStream(clientMappings)) {
                 //noinspection deprecation
                 clientOldToIntermediary.load(
                     MappingsProvider.readTinyMappings(inputStream),
@@ -689,7 +697,7 @@ public class GenStateSplit extends GenState
             serverNewToOld = new GenMap();
             serverOldToIntermediary = new GenMap();
 
-            try (FileInputStream inputStream = new FileInputStream(server)) {
+            try (FileInputStream inputStream = new FileInputStream(serverMappings)) {
                 //noinspection deprecation
                 serverOldToIntermediary.load(
                     MappingsProvider.readTinyMappings(inputStream),
@@ -708,9 +716,5 @@ public class GenStateSplit extends GenState
                 MatcherUtil.read(reader, invertClientServerMatches, clientToServer::addClass, clientToServer::addField, clientToServer::addMethod);
             }
         }
-
-        client.delete();
-        server.delete();
-        tmp.delete();
     }
 }

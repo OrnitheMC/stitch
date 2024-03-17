@@ -176,6 +176,36 @@ public class IntermediaryUtil
         updateIntermediary(args);
     }
 
+    public static void updateIntermediary(File oldClientJarFile, Collection<File> oldClientLibs, File oldServerJarFile, Collection<File> oldServerLibs, File newClientJarFile, File newClientNests, Collection<File> newClientLibs, File newServerJarFile, File newServerNests, Collection<File> newServerLibs, File oldClientIntermediaryFile, File oldServerIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, String[] options) throws IOException {
+        updateIntermediary(oldClientJarFile, oldClientLibs, oldServerJarFile, oldServerLibs, newClientJarFile, newClientNests, newClientLibs, newServerJarFile, newServerNests, newServerLibs, oldClientIntermediaryFile, oldServerIntermediaryFile, newIntermediaryFile, clientMatchesFile, serverMatchesFile, clientServerMatchesFile, false, false, false, options);
+    }
+
+    public static void updateIntermediary(File oldClientJarFile, Collection<File> oldClientLibs, File oldServerJarFile, Collection<File> oldServerLibs, File newClientJarFile, File newClientNests, Collection<File> newClientLibs, File newServerJarFile, File newServerNests, Collection<File> newServerLibs, File oldClientIntermediaryFile, File oldServerIntermediaryFile, File newIntermediaryFile, File clientMatchesFile, File serverMatchesFile, File clientServerMatchesFile, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches, String[] options) throws IOException {
+        SplitArgs args = parseOptions(new SplitArgs(), options);
+
+        args.oldClientJarFile = oldClientJarFile;
+        args.oldClientLibs.addAll(oldClientLibs);
+        args.oldServerJarFile = oldServerJarFile;
+        args.oldServerLibs.addAll(oldServerLibs);
+        args.newClientJarFile = newClientJarFile;
+        args.newClientNests = newClientNests;
+        args.newClientLibs.addAll(newClientLibs);
+        args.newServerJarFile = newServerJarFile;
+        args.newServerNests = newServerNests;
+        args.newServerLibs.addAll(newServerLibs);
+        args.oldClientIntermediaryFile = oldClientIntermediaryFile;
+        args.oldServerIntermediaryFile = oldServerIntermediaryFile;
+        args.newIntermediaryFile = newIntermediaryFile;
+        args.clientMatchesFile = clientMatchesFile;
+        args.serverMatchesFile = serverMatchesFile;
+        args.clientServerMatchesFile = clientServerMatchesFile;
+        args.invertClientMatches = invertClientMatches;
+        args.invertServerMatches = invertServerMatches;
+        args.invertClientServerMatches = invertClientServerMatches;
+
+        updateIntermediary(args);
+    }
+
     public static void updateIntermediary(MergedArgs args) throws IOException {
         GenStateMerged state = new GenStateMerged();
 
@@ -255,8 +285,10 @@ public class IntermediaryUtil
             System.err.println("Loading remapping files...");
             if (args.oldClientJarFile == args.oldServerJarFile) {
                 state.prepareUpdateFromMerged(args.oldIntermediaryFile, args.clientMatchesFile, args.serverMatchesFile, args.clientServerMatchesFile, args.invertClientMatches, args.invertServerMatches, args.invertClientServerMatches);
-            } else {
+            } else if (args.oldIntermediaryFile != null) {
                 state.prepareUpdateFromSplit(args.oldIntermediaryFile, args.clientMatchesFile, args.serverMatchesFile, args.clientServerMatchesFile, args.invertClientMatches, args.invertServerMatches, args.invertClientServerMatches);
+            } else {
+                state.prepareUpdateFromSplit(args.oldClientIntermediaryFile, args.oldServerIntermediaryFile, args.clientMatchesFile, args.serverMatchesFile, args.clientServerMatchesFile, args.invertClientMatches, args.invertServerMatches, args.invertClientServerMatches);
             }
         }
 
@@ -366,6 +398,8 @@ public class IntermediaryUtil
         File newServerNests;
         List<File> newServerLibs = new ArrayList<>();
         File oldIntermediaryFile;
+        File oldClientIntermediaryFile;
+        File oldServerIntermediaryFile;
         File newIntermediaryFile;
         File clientMatchesFile;
         File serverMatchesFile;
