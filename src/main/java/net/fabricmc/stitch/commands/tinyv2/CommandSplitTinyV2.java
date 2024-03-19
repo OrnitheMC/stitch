@@ -175,12 +175,12 @@ public class CommandSplitTinyV2 extends Command {
             for (int i = 4; i < header.length; i++) {
                 String dstNs = header[i];
 
-                if ("officialClient".equals(dstNs)) {
+                if ("clientOfficial".equals(dstNs)) {
                     clientNs = i - 3;
-                } else if ("officialServer".equals(dstNs)) {
+                } else if ("serverOfficial".equals(dstNs)) {
                     serverNs = i - 3;
                 } else {
-                    throw new RuntimeException("invalid dst namespace! only 'client' or 'server' is supported!");
+                    throw new RuntimeException("invalid dst namespace! only 'clientOfficial' or 'serverOfficial' is supported!");
                 }
             }
 
