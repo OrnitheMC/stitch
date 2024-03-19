@@ -123,10 +123,14 @@ public final class StitchUtil {
             // if the order is scrambled, it's not possible to merge
             // the lists while preserving the order from both sides
             if (i + j == saved) {
-                out.add(first.get(i));
-                out.add(second.get(j));
-                i++;
-                j++;
+                for (; i < first.size(); i++) {
+                    out.add(first.get(i));
+                }
+                for (; j < second.size(); j++) {
+                    if (!first.contains(second.get(j))) {
+                        out.add(second.get(j));
+                    }
+                }
             }
         }
 
