@@ -281,7 +281,7 @@ public class IntermediaryUtil
             e.printStackTrace();
         }
 
-        if (args.oldIntermediaryFile != null) {
+        if (args.oldIntermediaryFile != null || args.oldClientIntermediaryFile != null || args.oldServerIntermediaryFile != null) {
             System.err.println("Loading remapping files...");
             if (args.oldClientJarFile == args.oldServerJarFile) {
                 state.prepareUpdateFromMerged(args.oldIntermediaryFile, args.clientMatchesFile, args.serverMatchesFile, args.clientServerMatchesFile, args.invertClientMatches, args.invertServerMatches, args.invertClientServerMatches);
