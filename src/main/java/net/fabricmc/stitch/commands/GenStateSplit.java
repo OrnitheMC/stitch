@@ -669,7 +669,7 @@ public class GenStateSplit extends GenState
             throw new IOException(e);
         }
 
-        prepareUpdateFromSplit(client, server, clientMatches, serverMatches, clientServerMatches, invertClientMatches, invertServerMatches, invertClientServerMatches);
+        prepareUpdateFromSplitInternal(client, server, clientMatches, serverMatches, clientServerMatches, invertClientMatches, invertServerMatches, invertClientServerMatches);
 
         client.delete();
         server.delete();
@@ -677,6 +677,62 @@ public class GenStateSplit extends GenState
     }
 
     public void prepareUpdateFromSplit(File clientMappings, File serverMappings, File clientMatches, File serverMatches, File clientServerMatches, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches) throws IOException {
+        File tmp = null;
+        File c = null;
+        File s = null;
+        File client = null;
+        File server = null;
+
+        if (clientMappings != null) {
+            tmp = new File(clientMappings.getParentFile(), ".tmp");
+            client = new File(tmp, "client.tiny");
+            s = new File(tmp, "server.tiny");
+
+            tmp.mkdirs();
+
+            try {
+                new CommandSplitTiny().run(new String[] {
+                    clientMappings.getAbsolutePath(),
+                    client.getAbsolutePath(),
+                    s.getAbsolutePath()
+                });
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+        if (serverMappings != null) {
+            tmp = new File(serverMappings.getParentFile(), ".tmp");
+            c = new File(tmp, "client.tiny");
+            server = new File(tmp, "server.tiny");
+
+            tmp.mkdirs();
+
+            try {
+                new CommandSplitTiny().run(new String[] {
+                    serverMappings.getAbsolutePath(),
+                    c.getAbsolutePath(),
+                    server.getAbsolutePath()
+                });
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+
+        prepareUpdateFromSplitInternal(client, server, clientMatches, serverMatches, clientServerMatches, invertClientMatches, invertServerMatches, invertClientServerMatches);
+
+        if (clientMappings != null) {
+            client.delete();
+            c.delete();
+            tmp.delete();
+        }
+        if (serverMappings != null) {
+            server.delete();
+            s.delete();
+            tmp.delete();
+        }
+    }
+
+    public void prepareUpdateFromSplitInternal(File clientMappings, File serverMappings, File clientMatches, File serverMatches, File clientServerMatches, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches) throws IOException {
         if (clientMatches != null) {
             clientNewToOld = new GenMap();
             clientOldToIntermediary = new GenMap();
