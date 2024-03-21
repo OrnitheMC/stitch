@@ -722,12 +722,12 @@ public class GenStateSplit extends GenState
 
         if (clientMappings != null) {
             client.delete();
-            c.delete();
+            s.delete();
             tmp.delete();
         }
         if (serverMappings != null) {
             server.delete();
-            s.delete();
+            c.delete();
             tmp.delete();
         }
     }
