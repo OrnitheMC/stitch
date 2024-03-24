@@ -678,15 +678,12 @@ public class GenStateSplit extends GenState
 
     public void prepareUpdateFromSplit(File clientMappings, File serverMappings, File clientMatches, File serverMatches, File clientServerMatches, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches) throws IOException {
         File tmp = null;
-        File c = null;
-        File s = null;
         File client = null;
         File server = null;
 
         if (clientMappings != null) {
             tmp = new File(clientMappings.getParentFile(), ".tmp");
             client = new File(tmp, "client.tiny");
-            s = new File(tmp, "server.tiny");
 
             tmp.mkdirs();
 
@@ -694,7 +691,7 @@ public class GenStateSplit extends GenState
                 new CommandSplitTiny().run(new String[] {
                     clientMappings.getAbsolutePath(),
                     client.getAbsolutePath(),
-                    s.getAbsolutePath()
+                    "-"
                 });
             } catch (Exception e) {
                 throw new IOException(e);
@@ -702,7 +699,6 @@ public class GenStateSplit extends GenState
         }
         if (serverMappings != null) {
             tmp = new File(serverMappings.getParentFile(), ".tmp");
-            c = new File(tmp, "client.tiny");
             server = new File(tmp, "server.tiny");
 
             tmp.mkdirs();
@@ -710,7 +706,7 @@ public class GenStateSplit extends GenState
             try {
                 new CommandSplitTiny().run(new String[] {
                     serverMappings.getAbsolutePath(),
-                    c.getAbsolutePath(),
+                    "-",
                     server.getAbsolutePath()
                 });
             } catch (Exception e) {
@@ -722,12 +718,10 @@ public class GenStateSplit extends GenState
 
         if (clientMappings != null) {
             client.delete();
-            s.delete();
             tmp.delete();
         }
         if (serverMappings != null) {
             server.delete();
-            c.delete();
             tmp.delete();
         }
     }
