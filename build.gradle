@@ -7,7 +7,7 @@ plugins {
 sourceCompatibility = JavaVersion.VERSION_1_8
 
 def ENV = System.getenv()
-version = "0.15.4" + (ENV.GITHUB_ACTIONS ? "" : "+local")
+version = "0.15.5" + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 group = 'net.ornithemc'
 archivesBaseName = project.name.toLowerCase()
