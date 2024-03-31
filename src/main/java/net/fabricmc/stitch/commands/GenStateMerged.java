@@ -283,19 +283,21 @@ public class GenStateMerged extends GenState
                             String[] or = findName.split("\\$");
                             if (or.length > 1) {
                                 cname = stripLocalClassPrefix(or[or.length - 1]);
-                                if (nr.length == 1) {
-                                    // new class is top level
-                                    JarClassEntry findEntry = storageOld.getClass(oldName);
-                                    if (findEntry != null && findEntry.isAnonymous()) {
-                                        cname = "C_" + cname;
-                                    }
-                                }
                             } else {
                                 cname = stripPackageName(findName);
                                 if (nr.length == 1 && !cname.startsWith("C_")) {
                                     // not a name we generated, thus an unobfuscated name!
                                     // then we inherit not just the name but the package too
                                     translatedPrefix = findName.substring(0, findName.length() - cname.length());
+                                }
+                            }
+                            JarClassEntry oldEntry = storageOld.getClass(oldName);
+                            if (oldEntry != null) {
+                                if (oldEntry.isAnonymous() && !c.isAnonymous()) {
+                                    cname = "C_" + cname;
+                                }
+                                if (!oldEntry.isAnonymous() && c.isAnonymous()) {
+                                    cname = cname.substring(cname.indexOf("C_") + 2);
                                 }
                             }
                         }
