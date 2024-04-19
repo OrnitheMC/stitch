@@ -229,8 +229,17 @@ public class GenStateSplit extends GenState
 
     @Nullable
     private String getFieldName(JarClassEntry cc, JarClassEntry sc, JarFieldEntry cf, JarFieldEntry sf) {
-        if ((cf != null && !isMappedField(cf)) || (sf != null && !isMappedField(sf))) {
+        boolean clientUnmapped = (cf != null && !isMappedField(cf));
+        boolean serverUnmapped = (sf != null && !isMappedField(sf));
+
+        if (clientUnmapped && serverUnmapped) {
             return null;
+        }
+        if (clientUnmapped) {
+            return sf == null ? null : cf.getName();
+        }
+        if (serverUnmapped) {
+            return cf == null ? null : sf.getName();
         }
 
         String cname = (cf == null) ? null : inheritFieldName(cc, cf, clientNewToOld, clientOldToIntermediary);
