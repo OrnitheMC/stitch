@@ -244,33 +244,18 @@ public class GenStateSplit extends GenState
 
         String cname = (cf == null) ? null : inheritFieldName(cc, cf, clientNewToOld, clientOldToIntermediary);
         String sname = (sf == null) ? null : inheritFieldName(sc, sf, serverNewToOld, serverOldToIntermediary);
-        boolean cinvalid = false;
-        boolean sinvalid = false;
 
-        if (cname != null && !cname.contains("f_")) {
-            cinvalid = true;
-        }
-        if (sname != null && !sname.contains("f_")) {
-            sinvalid = true;
-        }
-        if (!cinvalid && !sinvalid && cname != null && sname != null && !cname.equals(sname)) {
+        if (cname != null && sname != null && !cname.equals(sname)) {
             throw new IllegalStateException("illegal name inheritance: client[" + cc.getName() + "." + cf.getName() + cf.getDescriptor() + " -> " + cname + "], server[" + sc.getName() + "." + sf.getName() + sf.getDescriptor() + " -> " + sname + "]");
         }
-        if (!cinvalid && cname != null) {
+        if (cname != null) {
             return cname;
         }
-        if (!sinvalid && sname != null) {
+        if (sname != null) {
             return sname;
         }
 
         String name = next(cf, sf, "f");
-
-        if (cinvalid) {
-            System.out.println("[client] " + cname + " is now " + name);
-        }
-        if (sinvalid) {
-            System.out.println("[server] " + sname + " is now " + name);
-        }
 
         return name;
     }
@@ -279,8 +264,10 @@ public class GenStateSplit extends GenState
         //noinspection deprecation
         EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
         if (findEntry != null) {
-            findEntry = oldToIntermediary.getField(findEntry);
-            if (findEntry != null) {
+            EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
+            if (findIntermediaryEntry != null) {
+                return findIntermediaryEntry.getName();
+            } else if (!isMappedFieldName(findEntry.getName())) {
                 return findEntry.getName();
             }
         }
@@ -316,16 +303,20 @@ public class GenStateSplit extends GenState
                     if (findEntry != null) {
                         names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
                     } else {
-                        // more involved...
-                        JarClassEntry oldBase = storageOld.getClass(oldEntry.getOwner());
-                        if (oldBase != null) {
-                            JarMethodEntry oldM = oldBase.getMethod(oldEntry.getName() + oldEntry.getDesc());
-                            List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                        if (!isMappedMethodName(oldEntry.getName())) {
+                            names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
+                        } else {
+                            // more involved...
+                            JarClassEntry oldBase = storageOld.getClass(oldEntry.getOwner());
+                            if (oldBase != null) {
+                                JarMethodEntry oldM = oldBase.getMethod(oldEntry.getName() + oldEntry.getDesc());
+                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
 
-                            for (JarClassEntry ccc : cccList) {
-                                findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
-                                if (findEntry != null) {
-                                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
+                                for (JarClassEntry ccc : cccList) {
+                                    findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
+                                    if (findEntry != null) {
+                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
+                                    }
                                 }
                             }
                         }
@@ -415,33 +406,18 @@ public class GenStateSplit extends GenState
 
         String cname = (cm == null) ? null : handleMethodConflicts("[client]", clientMethodNames, clientNames, clientEntries);
         String sname = (sm == null) ? null : handleMethodConflicts("[server]", serverMethodNames, serverNames, serverEntries);
-        boolean cinvalid = false;
-        boolean sinvalid = false;
 
-        if (cname != null && !cname.contains("m_")) {
-            cinvalid = true;
-        }
-        if (sname != null && !sname.contains("m_")) {
-            sinvalid = true;
-        }
-        if (!cinvalid && !sinvalid && cname != null && sname != null && !cname.equals(sname)) {
+        if (cname != null && sname != null && !cname.equals(sname)) {
             throw new IllegalStateException("illegal name inheritance: client[" + cc.getName() + "." + cm.getName() + cm.getDescriptor() + " -> " + cname + "], server[" + sc.getName() + "." + sm.getName() + sm.getDescriptor() + " -> " + sname + "]");
         }
-        if (!cinvalid && cname != null) {
+        if (cname != null) {
             return cname;
         }
-        if (!sinvalid && sname != null) {
+        if (sname != null) {
             return sname;
         }
 
         String name = nextMethodName(storageClient, storageServer, cc, sc, cm, sm);
-
-        if (cinvalid) {
-            System.out.println("[client] " + cname + " is now " + name);
-        }
-        if (sinvalid) {
-            System.out.println("[server] " + sname + " is now " + name);
-        }
 
         for (JarMethodEntry m : clientEntries) {
             clientMethodNames.put(m, name);

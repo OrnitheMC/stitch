@@ -84,15 +84,11 @@ public class GenStateMerged extends GenState
           //noinspection deprecation
             EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
-                findEntry = oldToIntermediary.getField(findEntry);
-                if (findEntry != null) {
-                    if (findEntry.getName().contains("f_")) {
-                        return findEntry.getName();
-                    } else {
-                        String newName = next(f, "f");
-                        System.out.println(findEntry.getName() + " is now " + newName);
-                        return newName;
-                    }
+                EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
+                if (findIntermediaryEntry != null) {
+                    return findIntermediaryEntry.getName();
+                } else if (!isMappedFieldName(findEntry.getName())) {
+                    return findEntry.getName();
                 }
             }
         }
@@ -136,16 +132,20 @@ public class GenStateMerged extends GenState
                     if (findEntry != null) {
                         names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
                     } else {
-                        // more involved...
-                        JarClassEntry oldBase = storageOld.getClass(oldEntry.getOwner());
-                        if (oldBase != null) {
-                            JarMethodEntry oldM = oldBase.getMethod(oldEntry.getName() + oldEntry.getDesc());
-                            List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                        if (!isMappedMethodName(oldEntry.getName())) {
+                            names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
+                        } else {
+                            // more involved...
+                            JarClassEntry oldBase = storageOld.getClass(oldEntry.getOwner());
+                            if (oldBase != null) {
+                                JarMethodEntry oldM = oldBase.getMethod(oldEntry.getName() + oldEntry.getDesc());
+                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
 
-                            for (JarClassEntry ccc : cccList) {
-                                findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
-                                if (findEntry != null) {
-                                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
+                                for (JarClassEntry ccc : cccList) {
+                                    findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
+                                    if (findEntry != null) {
+                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
+                                    }
                                 }
                             }
                         }
