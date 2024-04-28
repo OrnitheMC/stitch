@@ -60,10 +60,10 @@ public class CommandSplitTinyV2 extends Command {
         if (args[0].isEmpty()  || "-".equals(args[0]) || !Files.exists(input)) {
             throw new RuntimeException("input cannot be empty!");
         }
-        if (args[1].isEmpty() || "-".equals(args[1]) || !Files.isWritable(outputC)) {
+        if (args[1].isEmpty() || "-".equals(args[1]) || (Files.exists(outputC) && !Files.isWritable(outputC))) {
             outputC = null;
         }
-        if (args[2].isEmpty() || "-".equals(args[2]) || !Files.isWritable(outputS)) {
+        if (args[2].isEmpty() || "-".equals(args[2]) || (Files.exists(outputS) && !Files.isWritable(outputS))) {
             outputS = null;
         }
 
