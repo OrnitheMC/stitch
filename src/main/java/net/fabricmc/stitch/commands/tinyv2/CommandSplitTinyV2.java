@@ -85,7 +85,7 @@ public class CommandSplitTinyV2 extends Command {
                     writer().write("tiny");
                     writer().write("\t");
                     writer().write("2");;
-                    writer().write("/t");
+                    writer().write("\t");
                     writer().write("0");
                     writer().write("\t");
                     writer().write("official");
