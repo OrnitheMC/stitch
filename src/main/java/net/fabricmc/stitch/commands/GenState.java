@@ -43,7 +43,7 @@ public class GenState
     }
 
     public static boolean isMinecraftClassName(String name) {
-        return name.indexOf('/') < 0 || name.startsWith("net/minecraft/") || name.startsWith("com/mojang/");
+        return !name.matches(".*(argo|paulscode|fasterxml|jcraft|javax).*"); // match against libraries that are shaded into the jar
     }
 
     public static boolean isMappedClass(JarClassEntry c) {
