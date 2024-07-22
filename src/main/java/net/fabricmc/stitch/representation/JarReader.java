@@ -116,11 +116,6 @@ public class JarReader
                         continue;
                     }
 
-                    // really stupid fix for <=1.5.2!!!!!!!
-                    if (entry.getName().matches(".*(paulscode|fasterxml|jcraft|javax).*")) {
-                        continue;
-                    }
-
                     ClassReader reader = new ClassReader(jarStream);
                     ClassVisitor visitor = new ClassVisitor(StitchUtil.ASM_VERSION, null)
                     {
