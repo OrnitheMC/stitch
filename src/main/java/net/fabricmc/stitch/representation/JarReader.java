@@ -19,6 +19,7 @@ package net.fabricmc.stitch.representation;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -224,49 +225,7 @@ public class JarReader
             ZipEntry entry = zip.getEntry(name + ".class");
 
             if (entry != null) {
-                ClassReader reader = new ClassReader(zip.getInputStream(entry));
-                ClassVisitor visitor = new ClassVisitor(StitchUtil.ASM_VERSION, null)
-                {
-                    private final Set<JarMethodEntry> methods = new LinkedHashSet<>();
-                    private ClassEntryPopulator populator;
-
-                    @SuppressWarnings("deprecation")
-                    @Override
-                    public void visit(final int version, final int access, final String name, final String signature,
-                                      final String superName, final String[] interfaces) {
-                        populator = new ClassEntryPopulator();
-
-                        populator.access = access;
-                        populator.name = name;
-                        populator.signature = signature;
-                        populator.superclass = superName;
-                        populator.interfaces = interfaces;
-
-                        super.visit(version, access, name, signature, superName, interfaces);
-                    }
-
-                    @Override
-                    public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
-                                                     final String signature, final String[] exceptions) {
-                        methods.add(new JarMethodEntry(access, name, descriptor, signature, populator.name));
-
-                        return super.visitMethod(access, name, descriptor, signature, exceptions);
-                    }
-
-                    @Override
-                    public void visitEnd() {
-                        JarClassEntry classEntry = jar.getClass(populator.name, populator);
-
-                        for (JarMethodEntry methodEntry : methods) {
-                            classEntry.methods.put(methodEntry.getKey(), methodEntry);
-                        }
-
-                        super.visitEnd();
-                    }
-                };
-                reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-
-                return jar.getClass(name, null);
+                return readFromInputStream(jar, zip.getInputStream(entry));
             }
 
             return null;
@@ -276,77 +235,60 @@ public class JarReader
     static JarClassEntry readFromJre(JarRootEntry jar, String name) {
         try {
             if (name.startsWith("java/")) {
-                Class<?> c = Class.forName(name.replaceAll("[/]", "."));
+                InputStream is = ClassLoader.getSystemResourceAsStream(name + ".class");
 
-                if (c != null) {
-                    ClassEntryPopulator populator = new ClassEntryPopulator();
-
-                    populator.access = c.getModifiers();
-                    populator.name = getClassName(c);
-                    populator.superclass = c.getSuperclass() == null ? null : getClassName(c.getSuperclass());
-                    populator.interfaces = Arrays.stream(c.getInterfaces()).map(JarReader::getClassName).toArray(String[]::new);
-
-                    JarClassEntry cls = jar.getClass(populator.name, populator);
-                    for (Method m : c.getMethods()) {
-                        JarMethodEntry mtd = new JarMethodEntry(m.getModifiers(), m.getName(), getMethodDescriptor(m), m.toGenericString(), getClassName(c));
-                        cls.methods.put(mtd.getKey(), mtd);
-                    }
-
-                    return cls;
+                if (is != null) {
+                    return readFromInputStream(jar, is);
                 }
             }
-        } catch (ClassNotFoundException e) {
+        } catch (IOException e) {
         }
 
         return null;
     }
 
-    private static String getClassName(Class<?> c) {
-        return c.getName().replace('.', '/');
-    }
+    private static JarClassEntry readFromInputStream(JarRootEntry jar, InputStream is) throws IOException {
+        ClassReader reader = new ClassReader(is);
+        ClassVisitor visitor = new ClassVisitor(StitchUtil.ASM_VERSION, null)
+        {
+            private final Set<JarMethodEntry> methods = new LinkedHashSet<>();
+            private ClassEntryPopulator populator;
 
-    private static String getMethodDescriptor(Method m) {
-        String desc = "(";
-        for (Class<?> p : m.getParameterTypes()) {
-            desc += getTypeDescriptor(p);
-        }
-        desc += ")";
-        desc += getTypeDescriptor(m.getReturnType());
-        return desc;
-    }
+            @Override
+            public void visit(final int version, final int access, final String name, final String signature,
+                              final String superName, final String[] interfaces) {
+                populator = new ClassEntryPopulator();
 
-    private static String getTypeDescriptor(Class<?> c) {
-        String desc = "";
-        while (c.isArray()) {
-            desc += "[";
-            c = c.getComponentType();
-        }
-        if (c.isPrimitive()) {
-            if (c == Integer.TYPE) {
-                desc += 'I';
-            } else if (c == Void.TYPE) {
-                desc += 'V';
-            } else if (c == Boolean.TYPE) {
-                desc += 'Z';
-            } else if (c == Byte.TYPE) {
-                desc += 'B';
-            } else if (c == Character.TYPE) {
-                desc += 'C';
-            } else if (c == Short.TYPE) {
-                desc += 'S';
-            } else if (c == Double.TYPE) {
-                desc += 'D';
-            } else if (c == Float.TYPE) {
-                desc += 'F';
-            } else if (c == Long.TYPE) {
-                desc += 'J';
-            } else {
-                throw new RuntimeException("invalid primitive " + c);
+                populator.access = access;
+                populator.name = name;
+                populator.signature = signature;
+                populator.superclass = superName;
+                populator.interfaces = interfaces;
+
+                super.visit(version, access, name, signature, superName, interfaces);
             }
-        } else {
-            desc += "L" + getClassName(c) + ";";
-        }
 
-        return desc;
+            @Override
+            public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
+                                             final String signature, final String[] exceptions) {
+                methods.add(new JarMethodEntry(access, name, descriptor, signature, populator.name));
+
+                return super.visitMethod(access, name, descriptor, signature, exceptions);
+            }
+
+            @Override
+            public void visitEnd() {
+                JarClassEntry classEntry = jar.getClass(populator.name, populator);
+
+                for (JarMethodEntry methodEntry : methods) {
+                    classEntry.methods.put(methodEntry.getKey(), methodEntry);
+                }
+
+                super.visitEnd();
+            }
+        };
+        reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+
+        return jar.getClass(reader.getClassName(), null);
     }
 }
