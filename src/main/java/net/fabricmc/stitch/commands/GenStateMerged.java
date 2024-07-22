@@ -232,6 +232,9 @@ public class GenStateMerged extends GenState
     }
 
     private void addClass(BufferedWriter writer, Classpath storage, Classpath storageOld, JarClassEntry c, String translatedPrefix) throws IOException {
+        if (!isMinecraftClass(c)) {
+            return;
+        }
         String fullName = c.getName();
         String cname = "";
         // Typically inner class names are of the form com/example/Example$InnerName

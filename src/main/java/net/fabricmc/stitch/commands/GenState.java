@@ -38,6 +38,14 @@ public class GenState
         this.obfuscatedPatterns.add(Pattern.compile("^[^A-Z]*$")); // Default ofbfuscation. Obfuscated names are all lowercase
     }
 
+    public static boolean isMinecraftClass(JarClassEntry c) {
+        return isMinecraftClassName(c.getName());
+    }
+
+    public static boolean isMinecraftClassName(String name) {
+        return name.indexOf('/') < 0 || name.startsWith("net/minecraft/") || name.startsWith("com/mojang/");
+    }
+
     public static boolean isMappedClass(JarClassEntry c) {
         return true;
     }

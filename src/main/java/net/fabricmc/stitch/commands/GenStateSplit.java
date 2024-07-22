@@ -457,6 +457,15 @@ public class GenStateSplit extends GenState
     }
 
     private void addClass(BufferedWriter cw, BufferedWriter sw, Classpath storageClient, Classpath storageServer, Classpath storageClientOld, Classpath storageServerOld, JarClassEntry cc, JarClassEntry sc, String translatedPrefix) throws IOException {
+        boolean cisMc = (cc != null) && isMinecraftClass(cc);
+        boolean sisMc = (sc != null) && isMinecraftClass(sc);
+        if ((cisMc && !sisMc && sc != null) || (!cisMc && sisMc && cc != null)) {
+            throw new RuntimeException("a Minecraft class was matched to a non Minecraft class! client: " + cc.getName() + ", server: " + sc.getName());
+        }
+        if ((cc == null || !cisMc) && (sc == null || !sisMc)) {
+            return;
+        }
+
         String clientName = (cc == null) ? null : cc.getName();
         String serverName = (sc == null) ? null : sc.getName();
         String iname = "";
