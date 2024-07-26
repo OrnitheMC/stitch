@@ -32,10 +32,10 @@ import java.util.*;
 public class GenStateMerged extends GenState
 {
     private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
-    private GenMap oldToIntermediary = new GenMap(), newToOld = new GenMap();
+    private List<GenMap> oldToIntermediary = new ArrayList<>(), newToOld = new ArrayList<>();
     private GenMap newToIntermediary;
 
-    public void generate(File file, Classpath storage, Classpath storageOld) throws IOException {
+    public void generate(File file, Classpath storage, List<Classpath> storagesOld) throws IOException {
         if (file.exists()) {
             System.err.println("Target file exists - loading...");
             newToIntermediary = new GenMap();
@@ -54,14 +54,27 @@ public class GenStateMerged extends GenState
                 writer.write(String.format("v1\tofficial\t%s\n", targetNamespace));
 
                 for (JarClassEntry c : storage.getJar().getClasses()) {
-                    addClass(writer, storage, storageOld, c, this.defaultPackage);
+                    addClass(writer, storage, storagesOld, c, this.defaultPackage);
                 }
             }
         }
     }
 
+    private String inheritFieldName(Classpath storage, Classpath storageOld, JarClassEntry c, JarFieldEntry f, GenMap newToOld, GenMap oldToIntermediary) {
+        EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
+        if (findEntry != null) {
+            EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
+            if (findIntermediaryEntry != null) {
+                return findIntermediaryEntry.getName();
+            } else if (!isMappedFieldName(findEntry.getName())) {
+                return findEntry.getName();
+            }
+        }
+        return null;
+    }
+
     @Nullable
-    private String getFieldName(JarClassEntry c, JarFieldEntry f) {
+    private String getFieldName(Classpath storage, List<Classpath> storagesOld, JarClassEntry c, JarFieldEntry f) {
         if (!isMappedField(f)) {
             return null;
         }
@@ -80,29 +93,34 @@ public class GenStateMerged extends GenState
             }
         }
 
-        if (newToOld != null) {
-          //noinspection deprecation
-            EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
-            if (findEntry != null) {
-                EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
-                if (findIntermediaryEntry != null) {
-                    return findIntermediaryEntry.getName();
-                } else if (!isMappedFieldName(findEntry.getName())) {
-                    return findEntry.getName();
+        if (!newToOld.isEmpty()) {
+            String findName = null;
+
+            for (int i = 0; i < newToOld.size(); i++) {
+                String inheritedName = inheritFieldName(storage, storagesOld.get(i), c, f, newToOld.get(i), oldToIntermediary.get(i));
+
+                if (findName != null && inheritedName != null && !findName.equals(inheritedName)) {
+                    throw new IllegalStateException("illegal field name inheritance: " + c.getName() + "." + f.getName() + " -> [" + findName + ", " + i + ": " + inheritedName + "]");
                 }
+
+                findName = inheritedName;
+            }
+
+            if (findName != null) {
+                return findName;
             }
         }
 
         return next(f, "f");
     }
 
-    private Set<JarMethodEntry> findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names) {
+    private Set<JarMethodEntry> findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names) {
         Set<JarMethodEntry> allEntries = new HashSet<>();
-        findNames(storage, storageOld, c, m, names, allEntries);
+        findNames(storage, storageOld, c, m, newToOld, oldToIntermediary, names, allEntries);
         return allEntries;
     }
 
-    private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
+    private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
         if (!usedMethods.add(m)) {
             return;
         }
@@ -156,13 +174,71 @@ public class GenStateMerged extends GenState
 
         for (JarClassEntry mc : ccList) {
             for (Pair<JarClassEntry, String> pair : mc.getRelatedMethods(m)) {
-                findNames(storage, storageOld, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), names, usedMethods);
+                findNames(storage, storageOld, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), newToOld, oldToIntermediary, names, usedMethods);
             }
         }
     }
 
+    private String inheritMethodName(Classpath storage, Classpath storagesOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary) {
+        Map<String, Set<String>> names = new HashMap<>();
+        Set<JarMethodEntry> allEntries = findNames(storage, storagesOld, c, m, newToOld, oldToIntermediary, names);
+        for (JarMethodEntry mm : allEntries) {
+            if (methodNames.containsKey(mm)) {
+                return methodNames.get(mm);
+            }
+        }
+
+        if (names.size() > 1) {
+            System.out.println("Conflict detected - matched same target name!");
+            List<String> nameList = new ArrayList<>(names.keySet());
+            Collections.sort(nameList);
+
+            for (int i = 0; i < nameList.size(); i++) {
+                String s = nameList.get(i);
+                System.out.println((i+1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
+            }
+
+            boolean interactive = true;
+            if (!interactive) {
+                throw new RuntimeException("Conflict detected!");
+            }
+
+            while (true) {
+                String cmd = scanner.nextLine();
+                int i;
+                try {
+                    i = Integer.parseInt(cmd);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    continue;
+                }
+
+                if (i >= 1 && i <= nameList.size()) {
+                    for (JarMethodEntry mm : allEntries) {
+                        methodNames.put(mm, nameList.get(i - 1));
+                    }
+                    System.out.println("OK!");
+                    return nameList.get(i - 1);
+                }
+            }
+        } else if (names.size() == 1) {
+            String s = names.keySet().iterator().next();
+            for (JarMethodEntry mm : allEntries) {
+                methodNames.put(mm, s);
+            }
+            if (s.contains("m_")) {
+                return s;
+            } else {
+                String newName = nextMethodName(storage, c, m);
+                System.out.println(s + " is now " + newName);
+                return newName;
+            }
+        }
+        return null;
+    }
+
     @Nullable
-    private String getMethodName(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m) {
+    private String getMethodName(Classpath storage, List<Classpath> storagesOld, JarClassEntry c, JarMethodEntry m) {
         if (!isMappedMethod(storage, c, m)) {
             return null;
         }
@@ -171,67 +247,28 @@ public class GenStateMerged extends GenState
             return methodNames.get(m);
         }
 
-        if (newToOld != null || newToIntermediary != null) {
-            Map<String, Set<String>> names = new HashMap<>();
-            Set<JarMethodEntry> allEntries = findNames(storage, storageOld, c, m, names);
-            for (JarMethodEntry mm : allEntries) {
-                if (methodNames.containsKey(mm)) {
-                    return methodNames.get(mm);
+        if (!newToOld.isEmpty() || newToIntermediary != null) {
+            String findName = null;
+
+            for (int i = 0; i < newToOld.size(); i++) {
+                String inheritedName = inheritMethodName(storage, storagesOld.get(i), c, m, newToOld.get(i), oldToIntermediary.get(i));
+
+                if (findName != null && inheritedName != null && !findName.equals(inheritedName)) {
+                    throw new IllegalStateException("illegal method name inheritance: " + c.getName() + "." + m.getName() + m.getDescriptor() + " -> [" + findName + ", " + i + ": " + inheritedName + "]");
                 }
+
+                findName = inheritedName;
             }
 
-            if (names.size() > 1) {
-                System.out.println("Conflict detected - matched same target name!");
-                List<String> nameList = new ArrayList<>(names.keySet());
-                Collections.sort(nameList);
-
-                for (int i = 0; i < nameList.size(); i++) {
-                    String s = nameList.get(i);
-                    System.out.println((i+1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
-                }
-
-                boolean interactive = true;
-                if (!interactive) {
-                    throw new RuntimeException("Conflict detected!");
-                }
-
-                while (true) {
-                    String cmd = scanner.nextLine();
-                    int i;
-                    try {
-                        i = Integer.parseInt(cmd);
-                    } catch (NumberFormatException e) {
-                        e.printStackTrace();
-                        continue;
-                    }
-
-                    if (i >= 1 && i <= nameList.size()) {
-                        for (JarMethodEntry mm : allEntries) {
-                            methodNames.put(mm, nameList.get(i - 1));
-                        }
-                        System.out.println("OK!");
-                        return nameList.get(i - 1);
-                    }
-                }
-            } else if (names.size() == 1) {
-                String s = names.keySet().iterator().next();
-                for (JarMethodEntry mm : allEntries) {
-                    methodNames.put(mm, s);
-                }
-                if (s.contains("m_")) {
-                    return s;
-                } else {
-                    String newName = nextMethodName(storage, c, m);
-                    System.out.println(s + " is now " + newName);
-                    return newName;
-                }
+            if (findName != null) {
+                return findName;
             }
         }
 
         return nextMethodName(storage, c, m);
     }
 
-    private void addClass(BufferedWriter writer, Classpath storage, Classpath storageOld, JarClassEntry c, String translatedPrefix) throws IOException {
+    private void addClass(BufferedWriter writer, Classpath storage, List<Classpath> storagesOld, JarClassEntry c, String translatedPrefix) throws IOException {
         if (!isMinecraftClass(c)) {
             return;
         }
@@ -275,34 +312,23 @@ public class GenStateMerged extends GenState
                     }
                 }
 
-                if (cname == null && newToOld != null) {
-                    String findName = newToOld.getClass(fullName);
+                if (cname == null && !newToOld.isEmpty()) {
+                    Pair<String, String> findName = null;
+
+                    for (int i = 0; i < newToOld.size(); i++) {
+                        Pair<String, String> inheritedName = inheritClassName(fullName, storage, storagesOld.get(i), c, newToOld.get(i), oldToIntermediary.get(i));
+
+                        if (findName != null && inheritedName != null && !findName.equals(inheritedName)) {
+                            throw new IllegalStateException("illegal class name inheritance: " + fullName + " -> [" + (findName.getLeft() == null ? "" : findName.getLeft()) + findName.getRight() + ", " + i + ": " + (inheritedName.getLeft() == null ? "" : inheritedName.getLeft()) + inheritedName.getRight() + "]");
+                        }
+
+                        findName = inheritedName;
+                    }
+
                     if (findName != null) {
-                        String oldName = findName;
-                        findName = oldToIntermediary.getClass(findName);
-                        if (findName != null) {
-                            // similar to above, the names we generate follow the convention for inner classes
-                            String[] nr = fullName.split("\\$");
-                            String[] or = findName.split("\\$");
-                            if (or.length > 1) {
-                                cname = stripLocalClassPrefix(or[or.length - 1]);
-                            } else {
-                                cname = stripPackageName(findName);
-                                if (nr.length == 1 && !cname.startsWith("C_")) {
-                                    // not a name we generated, thus an unobfuscated name!
-                                    // then we inherit not just the name but the package too
-                                    translatedPrefix = findName.substring(0, findName.length() - cname.length());
-                                }
-                            }
-                            JarClassEntry oldEntry = storageOld.getClass(oldName);
-                            if (oldEntry != null) {
-                                if (oldEntry.isAnonymous() && !c.isAnonymous()) {
-                                    cname = "C_" + cname;
-                                }
-                                if (!oldEntry.isAnonymous() && c.isAnonymous()) {
-                                    cname = cname.substring(cname.indexOf("C_") + 2);
-                                }
-                            }
+                        cname = findName.getRight();
+                        if (findName.getLeft() != null) {
+                            translatedPrefix = findName.getLeft();
                         }
                     }
                 }
@@ -323,7 +349,7 @@ public class GenStateMerged extends GenState
         writer.write("CLASS\t" + c.getName() + "\t" + translatedPrefix + cname + "\n");
 
         for (JarFieldEntry f : c.getFields()) {
-            String fName = getFieldName(c, f);
+            String fName = getFieldName(storage, storagesOld, c, f);
             if (fName == null) {
                 fName = f.getName();
             }
@@ -337,7 +363,7 @@ public class GenStateMerged extends GenState
         }
 
         for (JarMethodEntry m : c.getMethods()) {
-            String mName = getMethodName(storage, storageOld, c, m);
+            String mName = getMethodName(storage, storagesOld, c, m);
             if (mName == null) {
                 if (!m.getName().startsWith("<") && m.isSource(storage, c) && !isEnumMethod(storage, c, m)) {
                     mName = m.getName();
@@ -353,17 +379,57 @@ public class GenStateMerged extends GenState
         }
 
         for (JarClassEntry cc : c.getInnerClasses()) {
-            addClass(writer, storage, storageOld, cc, translatedPrefix + cname + "$");
+            addClass(writer, storage, storagesOld, cc, translatedPrefix + cname + "$");
         }
     }
 
+    private Pair<String, String> inheritClassName(String fullName, Classpath stroage, Classpath storageOld, JarClassEntry c, GenMap newToOld, GenMap oldToIntermediary) {
+        String packageName = null;
+        String cname = null;
+
+        String findName = newToOld.getClass(fullName);
+        if (findName != null) {
+            String oldName = findName;
+            findName = oldToIntermediary.getClass(findName);
+            if (findName != null) {
+                // similar to above, the names we generate follow the convention for inner classes
+                String[] nr = fullName.split("\\$");
+                String[] or = findName.split("\\$");
+                if (or.length > 1) {
+                    cname = stripLocalClassPrefix(or[or.length - 1]);
+                } else {
+                    cname = stripPackageName(findName);
+                    if (nr.length == 1 && !cname.startsWith("C_")) {
+                        // not a name we generated, thus an unobfuscated name!
+                        // then we inherit not just the name but the package too
+                        packageName = findName.substring(0, findName.length() - cname.length());
+                    }
+                }
+                JarClassEntry oldEntry = storageOld.getClass(oldName);
+                if (oldEntry != null) {
+                    if (oldEntry.isAnonymous() && !c.isAnonymous()) {
+                        cname = "C_" + cname;
+                    }
+                    if (!oldEntry.isAnonymous() && c.isAnonymous()) {
+                        cname = cname.substring(cname.indexOf("C_") + 2);
+                    }
+                }
+            }
+        }
+
+        return cname == null ? null : Pair.of(packageName, cname);
+    }
+
     public void prepareRewrite(File oldMappings) throws IOException {
-        oldToIntermediary = new GenMap();
-        newToOld = new GenMap();
+        oldToIntermediary.clear();
+        newToOld.clear();
+
+        oldToIntermediary.add(new GenMap());
+        newToOld.add(new GenMap());
 
         try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
             //noinspection deprecation
-            oldToIntermediary.load(
+            oldToIntermediary.get(0).load(
                   MappingsProvider.readTinyMappings(inputStream),
                   "official",
                   targetNamespace
@@ -371,22 +437,27 @@ public class GenStateMerged extends GenState
         }
     }
 
-    public void prepareUpdate(File oldMappings, File oldMatches, boolean invertOldMatches) throws IOException {
-        oldToIntermediary = new GenMap();
-        newToOld = new GenMap();
+    public void prepareUpdate(List<File> oldMappings, List<File> oldMatches, boolean[] invertOldMatches) throws IOException {
+        oldToIntermediary.clear();
+        newToOld.clear();
 
-        try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
-            //noinspection deprecation
-            oldToIntermediary.load(
-                MappingsProvider.readTinyMappings(inputStream),
-                "official",
-                targetNamespace
-            );
-        }
+        for (int i = 0; i < oldMappings.size(); i++) {
+            oldToIntermediary.add(new GenMap());
+            newToOld.add(new GenMap());
 
-        try (FileReader fileReader = new FileReader(oldMatches)) {
-            try (BufferedReader reader = new BufferedReader(fileReader)) {
-                MatcherUtil.read(reader, !invertOldMatches, newToOld::addClass, newToOld::addField, newToOld::addMethod);
+            try (FileInputStream inputStream = new FileInputStream(oldMappings.get(i))) {
+                //noinspection deprecation
+                oldToIntermediary.get(i).load(
+                    MappingsProvider.readTinyMappings(inputStream),
+                    "official",
+                    targetNamespace
+                );
+            }
+
+            try (FileReader fileReader = new FileReader(oldMatches.get(i))) {
+                try (BufferedReader reader = new BufferedReader(fileReader)) {
+                    MatcherUtil.read(reader, !invertOldMatches[i], newToOld.get(i)::addClass, newToOld.get(i)::addField, newToOld.get(i)::addMethod);
+                }
             }
         }
     }

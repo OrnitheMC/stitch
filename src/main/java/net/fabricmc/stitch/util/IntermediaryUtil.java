@@ -24,15 +24,15 @@ public class IntermediaryUtil
     public static void generateIntermediary(File jarFile, File nests, Collection<File> libs, File intermediaryFile, String[] options) throws IOException {
         MergedArgs args = parseOptions(new MergedArgs(), options);
 
-        args.oldJarFile = null;
+        args.oldJarFiles.clear();
         args.oldLibs.clear();
         args.newJarFile = jarFile;
         args.newNests = nests;
         args.newLibs.addAll(libs);
-        args.oldIntermediaryFile = null;
+        args.oldIntermediaryFiles.clear();
         args.newIntermediaryFile = intermediaryFile;
-        args.matchesFile = null;
-        args.invertMatches = false;
+        args.matchesFiles.clear();
+        args.invertMatches = new boolean[0];
 
         updateIntermediary(args);
     }
@@ -74,29 +74,29 @@ public class IntermediaryUtil
         updateIntermediary(args);
     }
 
-    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, String[] options) throws IOException {
-        updateIntermediary(oldJarFile, oldLibs, newJarFile, newLibs, oldIntermediaryFile, newIntermediaryFile, matchesFile, false, options);
+    public static void updateIntermediary(Collection<File> oldJarFiles, Collection<List<File>> oldLibs, File newJarFile, Collection<File> newLibs, Collection<File> oldIntermediaryFiles, File newIntermediaryFile, Collection<File> matchesFiles, String[] options) throws IOException {
+        updateIntermediary(oldJarFiles, oldLibs, newJarFile, newLibs, oldIntermediaryFiles, newIntermediaryFile, matchesFiles, new boolean[matchesFiles.size()], options);
     }
 
-    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
-        updateIntermediary(oldJarFile, oldLibs, newJarFile, null, newLibs, oldIntermediaryFile, newIntermediaryFile, matchesFile, invertMatches, options);
+    public static void updateIntermediary(Collection<File> oldJarFiles, Collection<List<File>> oldLibs, File newJarFile, Collection<File> newLibs, Collection<File> oldIntermediaryFiles, File newIntermediaryFile, Collection<File> matchesFiles, boolean[] invertMatches, String[] options) throws IOException {
+        updateIntermediary(oldJarFiles, oldLibs, newJarFile, null, newLibs, oldIntermediaryFiles, newIntermediaryFile, matchesFiles, invertMatches, options);
     }
 
-    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, File newNests, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, String[] options) throws IOException {
-        updateIntermediary(oldJarFile, oldLibs, newJarFile, newNests, newLibs, oldIntermediaryFile, newIntermediaryFile, matchesFile, false, options);
+    public static void updateIntermediary(Collection<File> oldJarFiles, Collection<List<File>> oldLibs, File newJarFile, File newNests, Collection<File> newLibs, Collection<File> oldIntermediaryFiles, File newIntermediaryFile, Collection<File> matchesFiles, String[] options) throws IOException {
+        updateIntermediary(oldJarFiles, oldLibs, newJarFile, newNests, newLibs, oldIntermediaryFiles, newIntermediaryFile, matchesFiles, new boolean[matchesFiles.size()], options);
     }
 
-    public static void updateIntermediary(File oldJarFile, Collection<File> oldLibs, File newJarFile, File newNests, Collection<File> newLibs, File oldIntermediaryFile, File newIntermediaryFile, File matchesFile, boolean invertMatches, String[] options) throws IOException {
+    public static void updateIntermediary(Collection<File> oldJarFiles, Collection<List<File>> oldLibs, File newJarFile, File newNests, Collection<File> newLibs, Collection<File> oldIntermediaryFiles, File newIntermediaryFile, Collection<File> matchesFiles, boolean[] invertMatches, String[] options) throws IOException {
         MergedArgs args = parseOptions(new MergedArgs(), options);
 
-        args.oldJarFile = oldJarFile;
+        args.oldJarFiles.addAll(oldJarFiles);
         args.oldLibs.addAll(oldLibs);
         args.newJarFile = newJarFile;
         args.newNests = newNests;
         args.newLibs.addAll(newLibs);
-        args.oldIntermediaryFile = oldIntermediaryFile;
+        args.oldIntermediaryFiles.addAll(oldIntermediaryFiles);
         args.newIntermediaryFile = newIntermediaryFile;
-        args.matchesFile = matchesFile;
+        args.matchesFiles.addAll(matchesFiles);
         args.invertMatches = invertMatches;
 
         updateIntermediary(args);
@@ -211,14 +211,14 @@ public class IntermediaryUtil
 
         prepareState(args, state);
 
-        Classpath storageOld = null;
-        if (args.oldJarFile != null) {
-            storageOld = new Classpath(args.oldJarFile, args.oldLibs);
+        List<Classpath> storagesOld = new ArrayList<>();
+        for (int i = 0; i < args.oldJarFiles.size(); i++) {
+            storagesOld.add(new Classpath(args.oldJarFiles.get(i), args.oldLibs.get(i)));
         }
         Classpath storageNew = new Classpath(args.newJarFile, args.newNests, args.newLibs);
 
         try {
-            if (storageOld != null) {
+            for (Classpath storageOld : storagesOld) {
                 new JarReader(storageOld).apply();
             }
             new JarReader(storageNew).apply(args.salt.array());
@@ -226,13 +226,13 @@ public class IntermediaryUtil
             e.printStackTrace();
         }
 
-        if (args.oldIntermediaryFile != null) {
+        if (!args.oldIntermediaryFiles.isEmpty()) {
             System.err.println("Loading remapping files...");
-            state.prepareUpdate(args.oldIntermediaryFile, args.matchesFile, args.invertMatches);
+            state.prepareUpdate(args.oldIntermediaryFiles, args.matchesFiles, args.invertMatches);
         }
 
         System.err.println("Generating new mappings...");
-        state.generate(args.newIntermediaryFile, storageNew, storageOld);
+        state.generate(args.newIntermediaryFile, storageNew, storagesOld);
         System.err.println("Done!");
     }
 
@@ -373,15 +373,15 @@ public class IntermediaryUtil
 
     public static class MergedArgs extends Args {
 
-        File oldJarFile;
-        List<File> oldLibs = new ArrayList<>();
+        List<File> oldJarFiles = new ArrayList<>();
+        List<List<File>> oldLibs = new ArrayList<>();
         File newJarFile;
         File newNests;
         List<File> newLibs = new ArrayList<>();
-        File oldIntermediaryFile;
+        List<File> oldIntermediaryFiles = new ArrayList<>();
         File newIntermediaryFile;
-        File matchesFile;
-        boolean invertMatches;
+        List<File> matchesFiles = new ArrayList<>();
+        boolean[] invertMatches;
 
     }
 
