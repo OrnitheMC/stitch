@@ -114,7 +114,11 @@ public class IntermediaryUtil
         }
 
         System.err.println("Generating new mappings...");
-        state.generate(args.newIntermediaryFile, storageClientNew, storageServerNew, storageClientOld, storageServerOld);
+        if (args.newIntermediaryFile != null) {
+            state.generate(args.newIntermediaryFile, storageClientNew, storageServerNew, storageClientOld, storageServerOld);
+        } else {
+            state.generate(args.newClientIntermediaryFile, args.newServerIntermediaryFile, storageClientNew, storageServerNew, storageClientOld, storageServerOld);
+        }
         System.err.println("Done!");
     }
 
@@ -321,6 +325,8 @@ public class IntermediaryUtil
         File oldClientIntermediaryFile;
         File oldServerIntermediaryFile;
         File newIntermediaryFile;
+        File newClientIntermediaryFile;
+        File newServerIntermediaryFile;
         File clientMatchesFile;
         File serverMatchesFile;
         File clientServerMatchesFile;
@@ -442,6 +448,20 @@ public class IntermediaryUtil
 
         public SplitArgsBuilder newIntermediaryFile(File file) {
             args.newIntermediaryFile = file;
+            args.newClientIntermediaryFile = null;
+            args.newServerIntermediaryFile = null;
+            return this;
+        }
+
+        public SplitArgsBuilder newClientIntermediaryFile(File file) {
+            args.newIntermediaryFile = null;
+            args.newClientIntermediaryFile = file;
+            return this;
+        }
+
+        public SplitArgsBuilder newServerIntermediaryFile(File file) {
+            args.newIntermediaryFile = null;
+            args.newServerIntermediaryFile = file;
             return this;
         }
 

@@ -44,11 +44,30 @@ public class GenStateSplit extends GenState
 
         tmp.mkdirs();
 
-        BufferedWriter cw = new BufferedWriter(new FileWriter(client));
-        BufferedWriter sw = new BufferedWriter(new FileWriter(server));
+        generate(client, server, storageClient, storageServer, storageClientOld, storageServerOld);
 
-        cw.write("v1\tofficial\t" + targetNamespace + "\n");
-        sw.write("v1\tofficial\t" + targetNamespace + "\n");
+        try {
+            new CommandCombineTiny().run(new String[] {
+                client.getAbsolutePath(),
+                server.getAbsolutePath(),
+                file.getAbsolutePath()
+            });
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
+        
+
+        client.delete();
+        server.delete();
+        tmp.delete();
+    }
+
+    public void generate(File clientFile, File serverFile, Classpath storageClient, Classpath storageServer, Classpath storageClientOld, Classpath storageServerOld) throws IOException {
+        BufferedWriter cw = (clientFile == null) ? null : new BufferedWriter(new FileWriter(clientFile));
+        BufferedWriter sw = (serverFile == null) ? null : new BufferedWriter(new FileWriter(serverFile));
+
+        if (cw != null) cw.write("v1\tofficial\t" + targetNamespace + "\n");
+        if (sw != null) sw.write("v1\tofficial\t" + targetNamespace + "\n");
 
         // hack to make sure we don't write them multiple times
         Set<String> serverClasses = new HashSet<>();
@@ -78,23 +97,8 @@ public class GenStateSplit extends GenState
 
         serverClasses.clear();
 
-        cw.close();
-        sw.close();
-
-        try {
-            new CommandCombineTiny().run(new String[] {
-                client.getAbsolutePath(),
-                server.getAbsolutePath(),
-                file.getAbsolutePath()
-            });
-        } catch (Exception e) {
-            throw new IOException(e);
-        }
-        
-
-        client.delete();
-        server.delete();
-        tmp.delete();
+        if (cw != null) cw.close();
+        if (sw != null) sw.close();
     }
 
     private String next(AbstractJarEntry centry, AbstractJarEntry sentry, String prefix) {
