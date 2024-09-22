@@ -680,7 +680,7 @@ public class GenStateSplit extends GenState
         File server = null;
 
         boolean splitClient = clientMappings != null && needsSplitting(clientMappings);
-        boolean splitServer = clientMappings != null && needsSplitting(serverMappings);
+        boolean splitServer = serverMappings != null && needsSplitting(serverMappings);
 
         if (splitClient) {
             tmp = new File(clientMappings.getParentFile(), ".tmp");
