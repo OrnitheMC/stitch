@@ -679,7 +679,10 @@ public class GenStateSplit extends GenState
         File client = null;
         File server = null;
 
-        if (clientMappings != null) {
+        boolean splitClient = clientMappings != null && needsSplitting(clientMappings);
+        boolean splitServer = clientMappings != null && needsSplitting(serverMappings);
+
+        if (splitClient) {
             tmp = new File(clientMappings.getParentFile(), ".tmp");
             client = new File(tmp, "client.tiny");
 
@@ -694,8 +697,10 @@ public class GenStateSplit extends GenState
             } catch (Exception e) {
                 throw new IOException(e);
             }
+        } else {
+            client = clientMappings;
         }
-        if (serverMappings != null) {
+        if (splitServer) {
             tmp = new File(serverMappings.getParentFile(), ".tmp");
             server = new File(tmp, "server.tiny");
 
@@ -710,15 +715,17 @@ public class GenStateSplit extends GenState
             } catch (Exception e) {
                 throw new IOException(e);
             }
+        } else {
+            server = serverMappings;
         }
 
         prepareUpdateFromSplitInternal(client, server, clientMatches, serverMatches, clientServerMatches, invertClientMatches, invertServerMatches, invertClientServerMatches);
 
-        if (clientMappings != null) {
+        if (splitClient) {
             client.delete();
             tmp.delete();
         }
-        if (serverMappings != null) {
+        if (splitServer) {
             server.delete();
             tmp.delete();
         }
@@ -764,5 +771,18 @@ public class GenStateSplit extends GenState
                 MatcherUtil.read(reader, invertClientServerMatches, clientToServer::addClass, clientToServer::addField, clientToServer::addMethod);
             }
         }
+    }
+
+    private boolean needsSplitting(File mappings) {
+        try (BufferedReader br = new BufferedReader(new FileReader(mappings))) {
+            String header = br.readLine();
+
+            if (header != null) {
+                return !header.startsWith("v1\tofficial");
+            }
+        } catch (IOException e) {
+        }
+
+        return false;
     }
 }
