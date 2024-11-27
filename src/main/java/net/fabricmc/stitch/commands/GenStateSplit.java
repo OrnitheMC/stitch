@@ -207,8 +207,8 @@ public class GenStateSplit extends GenState
         return name;
     }
 
-    private void addField(BufferedWriter cw, BufferedWriter sw, JarClassEntry cc, JarClassEntry sc, JarFieldEntry cf, JarFieldEntry sf) throws IOException {
-        String fName = getFieldName(cc, sc, cf, sf);
+    private void addField(BufferedWriter cw, BufferedWriter sw, Classpath storageClient, Classpath storageServer, Classpath storageClientOld, Classpath storageServerOld, JarClassEntry cc, JarClassEntry sc, JarFieldEntry cf, JarFieldEntry sf) throws IOException {
+        String fName = getFieldName(storageClient, storageServer, storageClientOld, storageServerOld, cc, sc, cf, sf);
         if (fName == null) {
             String cname = (cf == null) ? null : cf.getName();
             String sname = (sf == null) ? null : sf.getName();
@@ -232,9 +232,9 @@ public class GenStateSplit extends GenState
 
 
     @Nullable
-    private String getFieldName(JarClassEntry cc, JarClassEntry sc, JarFieldEntry cf, JarFieldEntry sf) {
-        boolean clientUnmapped = (cf != null && !isMappedField(cf));
-        boolean serverUnmapped = (sf != null && !isMappedField(sf));
+    private String getFieldName(Classpath storageClient, Classpath storageServer, Classpath storageClientOld, Classpath storageServerOld, JarClassEntry cc, JarClassEntry sc, JarFieldEntry cf, JarFieldEntry sf) {
+        boolean clientUnmapped = (cf != null && !isMappedField(storageClient, cc, cf));
+        boolean serverUnmapped = (sf != null && !isMappedField(storageServer, sc, sf));
 
         if (clientUnmapped && serverUnmapped) {
             return null;
@@ -246,8 +246,8 @@ public class GenStateSplit extends GenState
             return cf == null ? null : sf.getName();
         }
 
-        String cname = (cf == null) ? null : inheritFieldName(cc, cf, clientNewToOld, clientOldToIntermediary);
-        String sname = (sf == null) ? null : inheritFieldName(sc, sf, serverNewToOld, serverOldToIntermediary);
+        String cname = (cf == null) ? null : inheritFieldName(storageClient, storageClientOld, cc, cf, clientNewToOld, clientOldToIntermediary);
+        String sname = (sf == null) ? null : inheritFieldName(storageServer, storageServerOld, sc, sf, serverNewToOld, serverOldToIntermediary);
 
         if (cname != null && sname != null && !cname.equals(sname)) {
             throw new IllegalStateException("illegal name inheritance: client[" + cc.getName() + "." + cf.getName() + cf.getDescriptor() + " -> " + cname + "], server[" + sc.getName() + "." + sf.getName() + sf.getDescriptor() + " -> " + sname + "]");
@@ -264,18 +264,19 @@ public class GenStateSplit extends GenState
         return name;
     }
 
-    private String inheritFieldName(JarClassEntry c, JarFieldEntry f, GenMap newToOld, GenMap oldToIntermediary) {
-        //noinspection deprecation
+    private String inheritFieldName(Classpath storage, Classpath storageOld, JarClassEntry c, JarFieldEntry f, GenMap newToOld, GenMap oldToIntermediary) {
         EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
         if (findEntry != null) {
-            EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
-            if (findIntermediaryEntry != null) {
-                return findIntermediaryEntry.getName();
-            } else if (!isMappedFieldName(findEntry.getName())) {
-                return findEntry.getName();
+            JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
+            if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+                EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
+                if (findIntermediaryEntry != null) {
+                    return findIntermediaryEntry.getName();
+                } else if (!isMappedFieldName(findEntry.getName())) {
+                    return findEntry.getName();
+                }
             }
         }
-
         return null;
     }
 
@@ -302,19 +303,19 @@ public class GenStateSplit extends GenState
             if (newToOld != null) {
                 EntryTriple findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
-                    EntryTriple oldEntry = findEntry;
-                    findEntry = oldToIntermediary.getMethod(oldEntry);
-                    if (findEntry != null) {
-                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                    } else {
-                        if (!isMappedMethodName(oldEntry.getName())) {
-                            names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
+                    JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
+                    if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+                        EntryTriple oldEntry = findEntry;
+                        findEntry = oldToIntermediary.getMethod(oldEntry);
+                        if (findEntry != null) {
+                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
                         } else {
-                            // more involved...
-                            JarClassEntry oldBase = storageOld.getClass(oldEntry.getOwner());
-                            if (oldBase != null) {
-                                JarMethodEntry oldM = oldBase.getMethod(oldEntry.getName() + oldEntry.getDesc());
-                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                            if (!isMappedMethodName(oldEntry.getName())) {
+                                names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
+                            } else {
+                                // more involved...
+                                JarMethodEntry oldM = oldClass.getMethod(oldEntry.getName() + oldEntry.getDesc());
+                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldClass);
 
                                 for (JarClassEntry ccc : cccList) {
                                     findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
@@ -438,8 +439,8 @@ public class GenStateSplit extends GenState
         String cname = null;
         String sname = null;
         if (mName == null) {
-            cname = (cm == null || cm.getName().startsWith("<") || !cm.isSource(storageClient, cc) || isEnumMethod(storageClient, cc, cm)) ? null : cm.getName();
-            sname = (sm == null || sm.getName().startsWith("<") || !sm.isSource(storageServer, sc) || isEnumMethod(storageServer, sc, sm)) ? null : sm.getName();
+            cname = (cm == null || cm.getName().charAt(0) == '<' || !cm.isSource(storageClient, cc) || isEnumMethod(storageClient, cc, cm)) ? null : cm.getName();
+            sname = (sm == null || sm.getName().charAt(0) == '<' || !sm.isSource(storageServer, sc) || isEnumMethod(storageServer, sc, sm)) ? null : sm.getName();
 
             if (cname != null && sname != null && !cname.equals(sname)) {
                 throw new RuntimeException("conflicting unmapped method names: client[" + cc.getName() + "." + cm.getName() + cm.getDescriptor() + " -> " + cname + "], server[" + sc.getName() + "." + sm.getName() + sm.getDescriptor() + " -> " + sname + "]");
@@ -453,9 +454,9 @@ public class GenStateSplit extends GenState
         }
 
         if (mName != null) {
-            if (cm != null && isMappedMethod(storageClient, cc, cm))
+            if (cm != null && cm.getName().charAt(0) != '<' && cm.isSource(storageClient, cc) && !isEnumMethod(storageClient, cc, cm))
                 cw.write("METHOD\t" + cc.getName() + "\t" + cm.getDescriptor() + "\t" + cm.getName() + "\t" + mName + "\n");
-            if (sm != null && isMappedMethod(storageServer, sc, sm))
+            if (sm != null && sm.getName().charAt(0) != '<' && sm.isSource(storageServer, sc) && !isEnumMethod(storageServer, sc, sm))
                 sw.write("METHOD\t" + sc.getName() + "\t" + sm.getDescriptor() + "\t" + sm.getName() + "\t" + mName + "\n");
         }
     }
@@ -477,8 +478,8 @@ public class GenStateSplit extends GenState
             throw new RuntimeException("generating intermediary for split jars with inner class attributes is not supported at this time!");
         }
 
-        boolean cunobf = clientName != null && ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (!cc.isAnonymous() && clientName.indexOf('$') < 0 && !isObfuscated(clientName)));
-        boolean sunobf = serverName != null && ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (!sc.isAnonymous() && serverName.indexOf('$') < 0 && !isObfuscated(serverName)));
+        boolean cunobf = clientName != null && (cc.isSerializable(storageClient) || ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (!cc.isAnonymous() && clientName.indexOf('$') < 0 && !isObfuscated(clientName))));
+        boolean sunobf = serverName != null && (sc.isSerializable(storageServer) || ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (!sc.isAnonymous() && serverName.indexOf('$') < 0 && !isObfuscated(serverName))));
 
         if (cunobf || sunobf) {
             if (cunobf && sunobf && !clientName.equals(serverName)) {
@@ -508,8 +509,8 @@ public class GenStateSplit extends GenState
             } else {
                 iname = null;
 
-                Pair<String, String> icname = (cc == null) ? null : inheritClassName(clientName, clientNewToOld, clientOldToIntermediary);
-                Pair<String, String> isname = (sc == null) ? null : inheritClassName(serverName, serverNewToOld, serverOldToIntermediary);
+                Pair<String, String> icname = (cc == null) ? null : inheritClassName(clientName, storageClient, storageClientOld, clientNewToOld, clientOldToIntermediary);
+                Pair<String, String> isname = (sc == null) ? null : inheritClassName(serverName, storageServer, storageServerOld, serverNewToOld, serverOldToIntermediary);
 
                 if (icname != null && isname != null && !icname.equals(isname)) {
                     throw new IllegalStateException("illegal name inheritance: client[" + clientName + " -> " + (icname.getLeft() == null ? "" : icname.getLeft()) + icname.getRight() + "], server[" + serverName + " -> " + (isname.getLeft() == null ? "" : isname.getLeft()) + isname.getRight() + "]");
@@ -552,7 +553,7 @@ public class GenStateSplit extends GenState
                     }
                 }
 
-                addField(cw, sw, cc, sc, cf, sf);
+                addField(cw, sw, storageClient, storageServer, storageClientOld, storageServerOld, cc, sc, cf, sf);
             }
             for (JarMethodEntry cm : cc.getMethods()) {
                 JarMethodEntry sm = null;
@@ -571,7 +572,7 @@ public class GenStateSplit extends GenState
         if (sc != null) {
             for (JarFieldEntry sf : sc.getFields()) {
                 if (!serverFields.contains(sf.getName() + sf.getDescriptor())) {
-                    addField(cw, sw, null, sc, null, sf);
+                    addField(cw, sw, null, storageServer, null, storageServerOld, null, sc, null, sf);
                 }
             }
             for (JarMethodEntry sm : sc.getMethods()) {
@@ -587,30 +588,36 @@ public class GenStateSplit extends GenState
         //}
     }
 
-    private Pair<String, String> inheritClassName(String fullName, GenMap newToOld, GenMap oldToIntermediary) {
+    private Pair<String, String> inheritClassName(String fullName, Classpath storage, Classpath storageOld, GenMap newToOld, GenMap oldToIntermediary) {
+        String packageName = null;
+        String cname = null;
+
         String findName = newToOld.getClass(fullName);
         if (findName != null) {
-            // similar to above, the names we generate follow the convention for inner classes
+            String oldName = findName;
             findName = oldToIntermediary.getClass(findName);
             if (findName != null) {
+                // similar to above, the names we generate follow the convention for inner classes
                 String[] nr = fullName.split("\\$");
                 String[] or = findName.split("\\$");
                 if (or.length > 1) {
-                    return Pair.of(null, stripLocalClassPrefix(or[or.length - 1]));
+                    cname = stripLocalClassPrefix(or[or.length - 1]);
                 } else {
-                    String cname = stripPackageName(findName);
-                    if (cname.startsWith("C_")) {
-                        return Pair.of(null, cname);
-                    } else {
+                    cname = stripPackageName(findName);
+                    if (nr.length == 1 && !cname.startsWith("C_")) {
                         // not a name we generated, thus an unobfuscated name!
                         // then we inherit not just the name but the package too
-                        return Pair.of(findName.substring(0, findName.length() - cname.length()), cname);
+                        packageName = findName.substring(0, findName.length() - cname.length());
                     }
+                }
+                JarClassEntry oldEntry = storageOld.getClass(oldName);
+                if (oldEntry != null && oldEntry.isSerializable(storageOld)) {
+                    cname = null;
                 }
             }
         }
 
-        return null;
+        return cname == null ? null : Pair.of(packageName, cname);
     }
 
     public void prepareUpdateFromMerged(File mappings, File clientMatches, File serverMatches, File clientServerMatches, boolean invertClientMatches, boolean invertServerMatches, boolean invertClientServerMatches) throws IOException {

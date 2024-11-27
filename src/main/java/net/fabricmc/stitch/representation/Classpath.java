@@ -32,9 +32,9 @@ public class Classpath {
         this.nests = nests == null ? Nests.empty() : Nests.of(nests.toPath());
 
         int i = 0;
-        this.classpath[i++] = new JarRootEntry(jar);
+        this.classpath[i++] = new JarRootEntry(jar, true);
         for (File lib : libs) {
-            this.classpath[i++] = new JarRootEntry(lib);
+            this.classpath[i++] = new JarRootEntry(lib, false);
         }
     }
 
@@ -60,7 +60,7 @@ public class Classpath {
     private JarRootEntry getJre() {
         if (jre == null) {
             try {
-                jre = new JarRootEntry(new File("."));
+                jre = new JarRootEntry(new File("."), false);
             } catch (Throwable t) {
                 throw new RuntimeException("unable to create jre representation", t);
             }

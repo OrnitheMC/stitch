@@ -63,11 +63,14 @@ public class GenStateMerged extends GenState
     private String inheritFieldName(Classpath storage, Classpath storageOld, JarClassEntry c, JarFieldEntry f, GenMap newToOld, GenMap oldToIntermediary) {
         EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
         if (findEntry != null) {
-            EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
-            if (findIntermediaryEntry != null) {
-                return findIntermediaryEntry.getName();
-            } else if (!isMappedFieldName(findEntry.getName())) {
-                return findEntry.getName();
+            JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
+            if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+                EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
+                if (findIntermediaryEntry != null) {
+                    return findIntermediaryEntry.getName();
+                } else if (!isMappedFieldName(findEntry.getName())) {
+                    return findEntry.getName();
+                }
             }
         }
         return null;
@@ -75,7 +78,7 @@ public class GenStateMerged extends GenState
 
     @Nullable
     private String getFieldName(Classpath storage, List<Classpath> storagesOld, JarClassEntry c, JarFieldEntry f) {
-        if (!isMappedField(f)) {
+        if (!isMappedField(storage, c, f)) {
             return null;
         }
 
@@ -145,19 +148,19 @@ public class GenStateMerged extends GenState
             if (findEntry == null && newToOld != null) {
                 findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
-                    EntryTriple oldEntry = findEntry;
-                    findEntry = oldToIntermediary.getMethod(oldEntry);
-                    if (findEntry != null) {
-                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                    } else {
-                        if (!isMappedMethodName(oldEntry.getName())) {
-                            names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
+                    JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
+                    if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+                        EntryTriple oldEntry = findEntry;
+                        findEntry = oldToIntermediary.getMethod(oldEntry);
+                        if (findEntry != null) {
+                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
                         } else {
-                            // more involved...
-                            JarClassEntry oldBase = storageOld.getClass(oldEntry.getOwner());
-                            if (oldBase != null) {
-                                JarMethodEntry oldM = oldBase.getMethod(oldEntry.getName() + oldEntry.getDesc());
-                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                            if (!isMappedMethodName(oldEntry.getName())) {
+                                names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
+                            } else {
+                                // more involved...
+                                JarMethodEntry oldM = oldClass.getMethod(oldEntry.getName() + oldEntry.getDesc());
+                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldClass);
 
                                 for (JarClassEntry ccc : cccList) {
                                     findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
@@ -288,7 +291,7 @@ public class GenStateMerged extends GenState
             }
         }
 
-        if ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && fullName.indexOf('$') < 0 && !isObfuscated(fullName))) {
+        if (c.isSerializable(storage) || ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && fullName.indexOf('$') < 0 && !isObfuscated(fullName)))) {
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
@@ -365,7 +368,7 @@ public class GenStateMerged extends GenState
         for (JarMethodEntry m : c.getMethods()) {
             String mName = getMethodName(storage, storagesOld, c, m);
             if (mName == null) {
-                if (!m.getName().startsWith("<") && m.isSource(storage, c) && !isEnumMethod(storage, c, m)) {
+                if (m.getName().charAt(0) != '<' && m.isSource(storage, c) && !isEnumMethod(storage, c, m)) {
                     mName = m.getName();
                 }
             }
@@ -412,6 +415,9 @@ public class GenStateMerged extends GenState
                     }
                     if (!oldEntry.isAnonymous() && c.isAnonymous()) {
                         cname = cname.substring(cname.indexOf("C_") + 2);
+                    }
+                    if (oldEntry.isSerializable(storageOld)) {
+                        cname = null;
                     }
                 }
             }

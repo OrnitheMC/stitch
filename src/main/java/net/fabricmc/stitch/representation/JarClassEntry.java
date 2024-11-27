@@ -292,6 +292,25 @@ public class JarClassEntry extends AbstractJarEntry
         return hasEnclosingClass() && innerName != null;
     }
 
+    public boolean isSerializable(Classpath storage) {
+        if (!jar.isGameJar()) {
+            // a bit jank but we are only looking for game classes
+            // that explicitly implement Serializable
+            return false;
+        }
+
+        JarClassEntry superClass = getSuperClass(storage);
+        
+        if (superClass == null) {
+            return false;
+        }
+        if (interfaces.contains("java/io/Serializable")) {
+            return true;
+        }
+
+        return superClass.isSerializable(storage);
+    }
+
     public static final class ClassEntryPopulator
     {
         public int access;
