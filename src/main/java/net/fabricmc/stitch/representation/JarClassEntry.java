@@ -292,6 +292,7 @@ public class JarClassEntry extends AbstractJarEntry
         return hasEnclosingClass() && innerName != null;
     }
 
+    @Override
     public boolean isSerializable(Classpath storage) {
         if (!jar.isGameJar()) {
             // a bit jank but we are only looking for game classes

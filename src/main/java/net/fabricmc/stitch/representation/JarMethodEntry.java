@@ -46,6 +46,22 @@ public class JarMethodEntry extends AbstractJarEntry
         return super.getKey() + desc;
     }
 
+    @Override
+    public boolean isSerializable(Classpath storage) {
+        if (Access.isStatic(access) || Access.isPrivate(access)) {
+            // these methods are specific to Serializable classes, but are private
+            if (!("writeObject".equals(name) && "(Ljava/io/ObjectOutputStream;)V".equals(desc))
+                && !("readObject".equals(name) && "(Ljava/io/ObjectInputStream;)V".equals(desc))
+                && !("writeReplace".equals(name) && "()Ljava/lang/Object;".equals(desc))
+                && !("readResolve".equals(name) && "()Ljava/lang/Object;".equals(desc))) {
+                return false;
+            }
+        }
+
+        JarClassEntry parent = storage.getClass(parentName);
+        return parent != null && parent.isSerializable(storage);
+    }
+
     public boolean isSource(Classpath storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return true;

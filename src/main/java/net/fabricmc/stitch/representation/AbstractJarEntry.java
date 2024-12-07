@@ -53,6 +53,10 @@ public abstract class AbstractJarEntry
         return name;
     }
 
+    public boolean isSerializable(Classpath storage) {
+        return false;
+    }
+
     protected void hash(byte[] parentHash) {
         Main.MESSAGE_DIGEST.reset();
         Main.MESSAGE_DIGEST.update(parentHash);

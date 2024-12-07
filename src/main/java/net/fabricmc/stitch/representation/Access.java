@@ -46,4 +46,8 @@ public final class Access {
     public static boolean isNative(int access) {
         return (access & (Opcodes.ACC_NATIVE)) != 0;
     }
+
+    public static boolean isTransient(int access) {
+        return (access & (Opcodes.ACC_TRANSIENT)) != 0;
+    }
 }

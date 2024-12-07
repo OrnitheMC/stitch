@@ -51,15 +51,15 @@ public class GenState
     }
 
     public static boolean isMappedField(Classpath storage, JarClassEntry c, JarFieldEntry f) {
-        return isMappedFieldName(f.getName()) && !c.isSerializable(storage);
+        return isMappedFieldName(f.getName()) && !f.isSerializable(storage);
     }
 
     public static boolean isMappedFieldName(String name) {
-        return !"serialVersionUID".equals(name); // only skip Java field names, make sure even unobfuscated fields are given names
+        return true; // make sure even unobfuscated fields are given names
     }
 
     public static boolean isMappedMethod(Classpath storage, JarClassEntry c, JarMethodEntry m) {
-        return isMappedMethodName(m.getName()) && m.isSource(storage, c) && !isEnumMethod(storage, c, m) && !c.isSerializable(storage);
+        return isMappedMethodName(m.getName()) && m.isSource(storage, c) && !isEnumMethod(storage, c, m) && !m.isSerializable(storage);
     }
 
     public static boolean isMappedMethodName(String name) {

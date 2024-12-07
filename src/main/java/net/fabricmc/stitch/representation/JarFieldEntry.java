@@ -41,4 +41,17 @@ public class JarFieldEntry extends AbstractJarEntry
     protected String getKey() {
         return super.getKey() + desc;
     }
+
+    @Override
+    public boolean isSerializable(Classpath storage) {
+        if (Access.isStatic(access) || Access.isTransient(access)) {
+            // these fields are specific to Serializable classes, but are static
+            if (!"serialVersionUID".equals(name) && !"serialPersistentFields".equals(name)) {
+                return false;
+            }
+        }
+
+        JarClassEntry parent = storage.getClass(parentName);
+        return parent != null && parent.isSerializable(storage);
+    }
 }
