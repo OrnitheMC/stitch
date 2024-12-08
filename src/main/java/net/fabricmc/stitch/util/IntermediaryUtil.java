@@ -135,6 +135,9 @@ public class IntermediaryUtil
                 state.addObfuscatedPattern(pattern);
             }
         }
+        if (args.checkSerializable != null) {
+            state.setCheckSerializable(args.checkSerializable);
+        }
         if (args.nameLength != null) {
             state.setNameLength(args.nameLength);
         }
@@ -152,6 +155,7 @@ public class IntermediaryUtil
         String defaultPackage;
         String targetNamespace;
         List<String> obfuscationPatterns = new ArrayList<>();
+        Boolean checkSerializable;
         Integer nameLength;
         String clientHash;
         String serverHash;
@@ -180,6 +184,11 @@ public class IntermediaryUtil
         public ArgsBuilder obfuscationPatterns(Collection<String> obfuscationPatterns) {
             args().obfuscationPatterns.clear();
             args().obfuscationPatterns.addAll(obfuscationPatterns);
+            return this;
+        }
+
+        public ArgsBuilder checkSerializable(boolean checkSerializable) {
+            args().checkSerializable = checkSerializable;
             return this;
         }
 

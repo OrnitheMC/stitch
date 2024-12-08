@@ -48,7 +48,7 @@ public class JarMethodEntry extends AbstractJarEntry
 
     @Override
     public boolean isSerializable(Classpath storage) {
-        if (Access.isStatic(access) || Access.isPrivate(access)) {
+        if (Access.isPrivate(access)) {
             // these methods are specific to Serializable classes, but are private
             if (!("writeObject".equals(name) && "(Ljava/io/ObjectOutputStream;)V".equals(desc))
                 && !("readObject".equals(name) && "(Ljava/io/ObjectInputStream;)V".equals(desc))

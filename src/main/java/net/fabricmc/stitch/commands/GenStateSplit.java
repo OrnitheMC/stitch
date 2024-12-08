@@ -268,7 +268,7 @@ public class GenStateSplit extends GenState
         EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
         if (findEntry != null) {
             JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-            if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+            if (oldClass != null && !isSerializable(storageOld, oldClass)) {
                 EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
                 if (findIntermediaryEntry != null) {
                     return findIntermediaryEntry.getName();
@@ -304,7 +304,7 @@ public class GenStateSplit extends GenState
                 EntryTriple findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-                    if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+                    if (oldClass != null && !isSerializable(storageOld, oldClass)) {
                         EntryTriple oldEntry = findEntry;
                         findEntry = oldToIntermediary.getMethod(oldEntry);
                         if (findEntry != null) {
@@ -478,8 +478,8 @@ public class GenStateSplit extends GenState
             throw new RuntimeException("generating intermediary for split jars with inner class attributes is not supported at this time!");
         }
 
-        boolean cunobf = clientName != null && (cc.isSerializable(storageClient) || ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (!cc.isAnonymous() && clientName.indexOf('$') < 0 && !isObfuscated(clientName))));
-        boolean sunobf = serverName != null && (sc.isSerializable(storageServer) || ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (!sc.isAnonymous() && serverName.indexOf('$') < 0 && !isObfuscated(serverName))));
+        boolean cunobf = clientName != null && (isSerializable(storageClient, cc) || ((cc.isInner() || cc.isLocal()) ? !isObfuscated(cc.getInnerName()) : (!cc.isAnonymous() && clientName.indexOf('$') < 0 && !isObfuscated(clientName))));
+        boolean sunobf = serverName != null && (isSerializable(storageServer, sc) || ((sc.isInner() || sc.isLocal()) ? !isObfuscated(sc.getInnerName()) : (!sc.isAnonymous() && serverName.indexOf('$') < 0 && !isObfuscated(serverName))));
 
         if (cunobf || sunobf) {
             if (cunobf && sunobf && !clientName.equals(serverName)) {
@@ -611,7 +611,7 @@ public class GenStateSplit extends GenState
                     }
                 }
                 JarClassEntry oldEntry = storageOld.getClass(oldName);
-                if (oldEntry != null && oldEntry.isSerializable(storageOld)) {
+                if (oldEntry != null && isSerializable(storageOld, oldEntry)) {
                     cname = null;
                 }
             }

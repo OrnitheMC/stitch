@@ -294,12 +294,6 @@ public class JarClassEntry extends AbstractJarEntry
 
     @Override
     public boolean isSerializable(Classpath storage) {
-        if (!jar.isGameJar()) {
-            // a bit jank but we are only looking for game classes
-            // that explicitly implement Serializable
-            return false;
-        }
-
         JarClassEntry superClass = getSuperClass(storage);
         
         if (superClass == null) {

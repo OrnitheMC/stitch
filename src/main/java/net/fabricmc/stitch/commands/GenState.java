@@ -30,6 +30,7 @@ public class GenState
     final Map<AbstractJarEntry, String> values = new IdentityHashMap<>();
     final Scanner scanner = new Scanner(System.in);
     final List<Pattern> obfuscatedPatterns = new ArrayList<>();
+    boolean checkSerializable;
     String defaultPackage = "net/minecraft/";
     String targetNamespace = "intermediary";
     int nameLength = 6;
@@ -50,16 +51,16 @@ public class GenState
         return true;
     }
 
-    public static boolean isMappedField(Classpath storage, JarClassEntry c, JarFieldEntry f) {
-        return isMappedFieldName(f.getName()) && !f.isSerializable(storage);
+    public boolean isMappedField(Classpath storage, JarClassEntry c, JarFieldEntry f) {
+        return isMappedFieldName(f.getName()) && !isSerializable(storage, f);
     }
 
     public static boolean isMappedFieldName(String name) {
         return true; // make sure even unobfuscated fields are given names
     }
 
-    public static boolean isMappedMethod(Classpath storage, JarClassEntry c, JarMethodEntry m) {
-        return isMappedMethodName(m.getName()) && m.isSource(storage, c) && !isEnumMethod(storage, c, m) && !m.isSerializable(storage);
+    public boolean isMappedMethod(Classpath storage, JarClassEntry c, JarMethodEntry m) {
+        return isMappedMethodName(m.getName()) && m.isSource(storage, c) && !isEnumMethod(storage, c, m) && !isSerializable(storage, m);
     }
 
     public static boolean isMappedMethodName(String name) {
@@ -78,6 +79,10 @@ public class GenState
 
     public boolean isObfuscated(String name) {
         return this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(name).matches());
+    }
+
+    public boolean isSerializable(Classpath storage, AbstractJarEntry entry) {
+        return checkSerializable && entry.isSerializable(storage);
     }
 
     public void setWriteAll() {
@@ -142,6 +147,10 @@ public class GenState
 
     public void addObfuscatedPattern(String regex) throws PatternSyntaxException {
         this.obfuscatedPatterns.add(Pattern.compile(regex));
+    }
+
+    public void setCheckSerializable(boolean checkSerializable) {
+        this.checkSerializable = checkSerializable;
     }
 
     public void setNameLength(int length) {

@@ -44,7 +44,7 @@ public class JarFieldEntry extends AbstractJarEntry
 
     @Override
     public boolean isSerializable(Classpath storage) {
-        if (Access.isStatic(access) || Access.isTransient(access)) {
+        if (Access.isPrivate(access) && (Access.isStatic(access) || Access.isTransient(access))) {
             // these fields are specific to Serializable classes, but are static
             if (!"serialVersionUID".equals(name) && !"serialPersistentFields".equals(name)) {
                 return false;

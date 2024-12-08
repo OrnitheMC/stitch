@@ -64,7 +64,7 @@ public class GenStateMerged extends GenState
         EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
         if (findEntry != null) {
             JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-            if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+            if (oldClass != null && !isSerializable(storageOld, oldClass)) {
                 EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
                 if (findIntermediaryEntry != null) {
                     return findIntermediaryEntry.getName();
@@ -149,7 +149,7 @@ public class GenStateMerged extends GenState
                 findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-                    if (oldClass != null && !oldClass.isSerializable(storageOld)) {
+                    if (oldClass != null && !isSerializable(storageOld, oldClass)) {
                         EntryTriple oldEntry = findEntry;
                         findEntry = oldToIntermediary.getMethod(oldEntry);
                         if (findEntry != null) {
@@ -291,7 +291,7 @@ public class GenStateMerged extends GenState
             }
         }
 
-        if (c.isSerializable(storage) || ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && fullName.indexOf('$') < 0 && !isObfuscated(fullName)))) {
+        if (isSerializable(storage, c) || ((c.isInner() || c.isLocal()) ? !isObfuscated(c.getInnerName()) : (!c.isAnonymous() && fullName.indexOf('$') < 0 && !isObfuscated(fullName)))) {
             translatedPrefix = fullName;
         } else {
             if (!isMappedClass(c)) {
@@ -416,7 +416,7 @@ public class GenStateMerged extends GenState
                     if (!oldEntry.isAnonymous() && c.isAnonymous()) {
                         cname = cname.substring(cname.indexOf("C_") + 2);
                     }
-                    if (oldEntry.isSerializable(storageOld)) {
+                    if (isSerializable(storageOld, oldEntry)) {
                         cname = null;
                     }
                 }
