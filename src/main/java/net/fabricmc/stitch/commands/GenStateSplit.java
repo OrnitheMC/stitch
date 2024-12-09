@@ -268,7 +268,8 @@ public class GenStateSplit extends GenState
         EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
         if (findEntry != null) {
             JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-            if (oldClass != null && !isSerializable(storageOld, oldClass)) {
+            JarFieldEntry oldField = (oldClass == null) ? null : oldClass.getField(findEntry.getName() + findEntry.getDesc());
+            if (oldField != null && !isSerializable(storageOld, oldField)) {
                 EntryTriple findIntermediaryEntry = oldToIntermediary.getField(findEntry);
                 if (findIntermediaryEntry != null) {
                     return findIntermediaryEntry.getName();
@@ -304,7 +305,8 @@ public class GenStateSplit extends GenState
                 EntryTriple findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-                    if (oldClass != null && !isSerializable(storageOld, oldClass)) {
+                    JarMethodEntry oldMethod = (oldClass == null) ? null : oldClass.getMethod(findEntry.getName() + findEntry.getDesc());
+                    if (oldMethod != null && !isSerializable(storageOld, oldMethod)) {
                         EntryTriple oldEntry = findEntry;
                         findEntry = oldToIntermediary.getMethod(oldEntry);
                         if (findEntry != null) {
