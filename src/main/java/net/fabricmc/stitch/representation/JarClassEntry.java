@@ -294,16 +294,12 @@ public class JarClassEntry extends AbstractJarEntry
 
     @Override
     public boolean isSerializable(Classpath storage) {
-        JarClassEntry superClass = getSuperClass(storage);
-        
-        if (superClass == null) {
-            return false;
-        }
         if (interfaces.contains("java/io/Serializable")) {
             return true;
         }
 
-        return superClass.isSerializable(storage);
+        JarClassEntry superClass = storage.getClass(superclass);
+        return superClass != null && superClass.isSerializable(storage);
     }
 
     public static final class ClassEntryPopulator

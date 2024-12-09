@@ -34,9 +34,13 @@ public class IntermediaryUtil
 
         List<Classpath> storagesOld = new ArrayList<>();
         for (int i = 0; i < args.oldJarFiles.size(); i++) {
-            storagesOld.add(new Classpath(args.oldJarFiles.get(i), args.oldLibs.get(i)));
+            Classpath storageOld = new Classpath(args.oldJarFiles.get(i), args.oldLibs.get(i));
+            storageOld.setSerializable(args.oldCheckSerializable[i]);
+
+            storagesOld.add(storageOld);
         }
         Classpath storageNew = new Classpath(args.newJarFile, args.newNests, args.newLibs);
+        storageNew.setSerializable(args.newCheckSerializable);
 
         try {
             for (Classpath storageOld : storagesOld) {
@@ -69,20 +73,26 @@ public class IntermediaryUtil
         if (args.oldClientJarFile == args.oldServerJarFile) {
             if (args.oldClientJarFile != null) {
                 storageClientOld = storageServerOld = new Classpath(args.oldClientJarFile, args.oldClientLibs);
+                storageClientOld.setSerializable(args.oldClientCheckSerializable);
+                storageServerOld.setSerializable(args.oldServerCheckSerializable);
             }
         } else {
             if (args.oldClientJarFile != null) {
                 storageClientOld = new Classpath(args.oldClientJarFile, args.oldClientLibs);
+                storageClientOld.setSerializable(args.oldClientCheckSerializable);
             }
             if (args.oldServerJarFile != null) {
                 storageServerOld = new Classpath(args.oldServerJarFile, args.oldServerLibs);
+                storageServerOld.setSerializable(args.oldServerCheckSerializable);
             }
         }
         if (args.newClientJarFile != null) {
             storageClientNew = new Classpath(args.newClientJarFile, args.newClientNests, args.newClientLibs);
+            storageClientNew.setSerializable(args.newClientCheckSerializable);
         }
         if (args.newServerJarFile != null) {
             storageServerNew = new Classpath(args.newServerJarFile, args.newServerNests, args.newServerLibs);
+            storageServerNew.setSerializable(args.newServerCheckSerializable);
         }
 
         try {
@@ -135,9 +145,6 @@ public class IntermediaryUtil
                 state.addObfuscatedPattern(pattern);
             }
         }
-        if (args.checkSerializable != null) {
-            state.setCheckSerializable(args.checkSerializable);
-        }
         if (args.nameLength != null) {
             state.setNameLength(args.nameLength);
         }
@@ -155,7 +162,6 @@ public class IntermediaryUtil
         String defaultPackage;
         String targetNamespace;
         List<String> obfuscationPatterns = new ArrayList<>();
-        Boolean checkSerializable;
         Integer nameLength;
         String clientHash;
         String serverHash;
@@ -187,11 +193,6 @@ public class IntermediaryUtil
             return this;
         }
 
-        public ArgsBuilder checkSerializable(boolean checkSerializable) {
-            args().checkSerializable = checkSerializable;
-            return this;
-        }
-
         public ArgsBuilder nameLength(int length) {
             args().nameLength = length;
             return this;
@@ -212,9 +213,11 @@ public class IntermediaryUtil
 
         List<File> oldJarFiles = new ArrayList<>();
         List<List<File>> oldLibs = new ArrayList<>();
+        boolean[] oldCheckSerializable;
         File newJarFile;
         File newNests;
         List<File> newLibs = new ArrayList<>();
+        Boolean newCheckSerializable;
         List<File> oldIntermediaryFiles = new ArrayList<>();
         File newIntermediaryFile;
         List<File> matchesFiles = new ArrayList<>();
@@ -225,6 +228,7 @@ public class IntermediaryUtil
     public static class MergedArgsBuilder extends ArgsBuilder {
 
         private final MergedArgs args = new MergedArgs();
+        private final List<Boolean> oldCheckSerializable = new ArrayList<>();
         private final List<Boolean> invertMatches = new ArrayList<>();
 
         @Override
@@ -266,6 +270,17 @@ public class IntermediaryUtil
             return this;
         }
 
+        public MergedArgsBuilder oldCheckSerializable(List<Boolean> checkSerializable) {
+            oldCheckSerializable.clear();
+            oldCheckSerializable.addAll(checkSerializable);
+            return this;
+        }
+
+        public MergedArgsBuilder addOldCheckSerializable(boolean checkSerializable) {
+            oldCheckSerializable.add(checkSerializable);
+            return this;
+        }
+
         public MergedArgsBuilder newJarFile(File jar) {
             args.newJarFile = jar;
             return this;
@@ -283,6 +298,11 @@ public class IntermediaryUtil
         public MergedArgsBuilder newLibraries(Collection<File> libs) {
             args.newLibs.clear();
             args.newLibs.addAll(libs);
+            return this;
+        }
+
+        public MergedArgsBuilder newCheckSerializable(boolean checkSerializable) {
+            args.newCheckSerializable = checkSerializable;
             return this;
         }
 
@@ -313,6 +333,7 @@ public class IntermediaryUtil
         }
 
         public MergedArgs build() {
+            args.oldCheckSerializable = Booleans.toArray(oldCheckSerializable);
             args.invertMatches = Booleans.toArray(invertMatches);
             return args;
         }
@@ -322,14 +343,18 @@ public class IntermediaryUtil
 
         File oldClientJarFile;
         List<File> oldClientLibs = new ArrayList<>();
+        boolean oldClientCheckSerializable;
         File oldServerJarFile;
         List<File> oldServerLibs = new ArrayList<>();
+        boolean oldServerCheckSerializable;
         File newClientJarFile;
         File newClientNests;
         List<File> newClientLibs = new ArrayList<>();
+        boolean newClientCheckSerializable;
         File newServerJarFile;
         File newServerNests;
         List<File> newServerLibs = new ArrayList<>();
+        boolean newServerCheckSerializable;
         File oldIntermediaryFile;
         File oldClientIntermediaryFile;
         File oldServerIntermediaryFile;
@@ -366,6 +391,10 @@ public class IntermediaryUtil
             return oldClientLibraries(libs).oldServerLibraries(libs);
         }
 
+        public SplitArgsBuilder oldCheckSerializable(boolean checkSerializable) {
+            return oldClientCheckSerializable(checkSerializable).oldServerCheckSerializable(checkSerializable);
+        }
+
         public SplitArgsBuilder oldClientJarFile(File jar) {
             args.oldClientJarFile = jar;
             return this;
@@ -381,6 +410,11 @@ public class IntermediaryUtil
             return this;
         }
 
+        public SplitArgsBuilder oldClientCheckSerializable(boolean checkSerializable) {
+            args.oldClientCheckSerializable = checkSerializable;
+            return this;
+        }
+
         public SplitArgsBuilder oldServerJarFile(File jar) {
             args.oldServerJarFile = jar;
             return this;
@@ -393,6 +427,11 @@ public class IntermediaryUtil
         public SplitArgsBuilder oldServerLibraries(Collection<File> libs) {
             args.oldServerLibs.clear();
             args.oldServerLibs.addAll(libs);
+            return this;
+        }
+
+        public SplitArgsBuilder oldServerCheckSerializable(boolean checkSerializable) {
+            args.oldServerCheckSerializable = checkSerializable;
             return this;
         }
 
@@ -416,6 +455,11 @@ public class IntermediaryUtil
             return this;
         }
 
+        public SplitArgsBuilder newClientCheckSerializable(boolean checkSerializable) {
+            args.newClientCheckSerializable = checkSerializable;
+            return this;
+        }
+
         public SplitArgsBuilder newServerJarFile(File jar) {
             args.newServerJarFile = jar;
             return this;
@@ -433,6 +477,11 @@ public class IntermediaryUtil
         public SplitArgsBuilder newServerLibraries(Collection<File> libs) {
             args.newServerLibs.clear();
             args.newServerLibs.addAll(libs);
+            return this;
+        }
+
+        public SplitArgsBuilder newServerCheckSerializable(boolean checkSerializable) {
+            args.newServerCheckSerializable = checkSerializable;
             return this;
         }
 

@@ -15,6 +15,8 @@ public class Classpath {
     final JarRootEntry[] classpath;
     final Nests nests;
 
+    private boolean serializable;
+
     public Classpath(File jar, File... libs) throws IOException {
         this(jar, null, libs);
     }
@@ -32,9 +34,9 @@ public class Classpath {
         this.nests = nests == null ? Nests.empty() : Nests.of(nests.toPath());
 
         int i = 0;
-        this.classpath[i++] = new JarRootEntry(jar, true);
+        this.classpath[i++] = new JarRootEntry(jar);
         for (File lib : libs) {
-            this.classpath[i++] = new JarRootEntry(lib, false);
+            this.classpath[i++] = new JarRootEntry(lib);
         }
     }
 
@@ -53,6 +55,14 @@ public class Classpath {
         }
     }
 
+    public void setSerializable(boolean serializable) {
+        this.serializable = serializable;
+    }
+
+    public boolean isSerializable() {
+        return serializable;
+    }
+
     public JarRootEntry getJar() {
         return this.classpath[0];
     }
@@ -60,7 +70,7 @@ public class Classpath {
     private JarRootEntry getJre() {
         if (jre == null) {
             try {
-                jre = new JarRootEntry(new File("."), false);
+                jre = new JarRootEntry(new File("."));
             } catch (Throwable t) {
                 throw new RuntimeException("unable to create jre representation", t);
             }

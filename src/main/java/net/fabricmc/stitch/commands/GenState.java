@@ -30,7 +30,6 @@ public class GenState
     final Map<AbstractJarEntry, String> values = new IdentityHashMap<>();
     final Scanner scanner = new Scanner(System.in);
     final List<Pattern> obfuscatedPatterns = new ArrayList<>();
-    boolean checkSerializable;
     String defaultPackage = "net/minecraft/";
     String targetNamespace = "intermediary";
     int nameLength = 6;
@@ -82,7 +81,7 @@ public class GenState
     }
 
     public boolean isSerializable(Classpath storage, AbstractJarEntry entry) {
-        return checkSerializable && entry.isSerializable(storage);
+        return storage.isSerializable() && entry.isSerializable(storage);
     }
 
     public void setWriteAll() {
@@ -147,10 +146,6 @@ public class GenState
 
     public void addObfuscatedPattern(String regex) throws PatternSyntaxException {
         this.obfuscatedPatterns.add(Pattern.compile(regex));
-    }
-
-    public void setCheckSerializable(boolean checkSerializable) {
-        this.checkSerializable = checkSerializable;
     }
 
     public void setNameLength(int length) {

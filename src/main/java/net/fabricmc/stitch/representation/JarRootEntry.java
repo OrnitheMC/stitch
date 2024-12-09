@@ -24,23 +24,17 @@ import java.util.*;
 public class JarRootEntry extends AbstractJarEntry
 {
     final File file;
-    final boolean gameJar;
     final Set<String> classQueue;
     final Map<String, JarClassEntry> classTree;
     final Map<String, JarClassEntry> allClasses;
 
-    public JarRootEntry(File file, boolean gameJar) throws IOException {
+    public JarRootEntry(File file) throws IOException {
         super(file.getName(), "");
 
         this.file = file;
-        this.gameJar = gameJar;
         this.classQueue = new LinkedHashSet<>();
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
         this.allClasses = new TreeMap<>(Comparator.naturalOrder());
-    }
-
-    public boolean isGameJar() {
-        return gameJar;
     }
 
     public JarClassEntry getClass(String name, JarClassEntry.ClassEntryPopulator populator) {
