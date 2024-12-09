@@ -294,6 +294,10 @@ public class JarClassEntry extends AbstractJarEntry
 
     @Override
     public boolean isSerializable(Classpath storage) {
+        // enums are not used for level serialization in mc
+        if (Access.isEnum(access)) {
+            return false;
+        }
         if (interfaces.contains("java/io/Serializable")) {
             return true;
         }
