@@ -229,12 +229,10 @@ public class JarReader
 
     static JarClassEntry readFromJre(JarRootEntry jar, String name) {
         try {
-            if (name.startsWith("java/")) {
-                InputStream is = ClassLoader.getSystemResourceAsStream(name + ".class");
+            InputStream is = ClassLoader.getSystemResourceAsStream(name + ".class");
 
-                if (is != null) {
-                    return readFromInputStream(jar, is);
-                }
+            if (is != null) {
+                return readFromInputStream(jar, is);
             }
         } catch (IOException e) {
         }
