@@ -35,12 +35,16 @@ public class IntermediaryUtil
         List<Classpath> storagesOld = new ArrayList<>();
         for (int i = 0; i < args.oldJarFiles.size(); i++) {
             Classpath storageOld = new Classpath(args.oldJarFiles.get(i), args.oldLibs.get(i));
-            storageOld.setSerializable(args.oldCheckSerializable[i]);
+            if (args.oldCheckSerializable[i] != null) {
+                storageOld.setSerializable(args.oldCheckSerializable[i]);
+            }
 
             storagesOld.add(storageOld);
         }
         Classpath storageNew = new Classpath(args.newJarFile, args.newNests, args.newLibs);
-        storageNew.setSerializable(args.newCheckSerializable);
+        if (args.newCheckSerializable != null) {
+            storageNew.setSerializable(args.newCheckSerializable);
+        }
 
         try {
             for (Classpath storageOld : storagesOld) {
@@ -73,26 +77,38 @@ public class IntermediaryUtil
         if (args.oldClientJarFile == args.oldServerJarFile) {
             if (args.oldClientJarFile != null) {
                 storageClientOld = storageServerOld = new Classpath(args.oldClientJarFile, args.oldClientLibs);
-                storageClientOld.setSerializable(args.oldClientCheckSerializable);
-                storageServerOld.setSerializable(args.oldServerCheckSerializable);
+                if (args.oldClientCheckSerializable != null) {
+                    storageClientOld.setSerializable(args.oldClientCheckSerializable);
+                }
+                if (args.oldServerCheckSerializable != null) {
+                    storageServerOld.setSerializable(args.oldServerCheckSerializable);
+                }
             }
         } else {
             if (args.oldClientJarFile != null) {
                 storageClientOld = new Classpath(args.oldClientJarFile, args.oldClientLibs);
-                storageClientOld.setSerializable(args.oldClientCheckSerializable);
+                if (args.oldClientCheckSerializable != null) {
+                    storageClientOld.setSerializable(args.oldClientCheckSerializable);
+                }
             }
             if (args.oldServerJarFile != null) {
                 storageServerOld = new Classpath(args.oldServerJarFile, args.oldServerLibs);
-                storageServerOld.setSerializable(args.oldServerCheckSerializable);
+                if (args.oldServerCheckSerializable != null) {
+                    storageServerOld.setSerializable(args.oldServerCheckSerializable);
+                }
             }
         }
         if (args.newClientJarFile != null) {
             storageClientNew = new Classpath(args.newClientJarFile, args.newClientNests, args.newClientLibs);
-            storageClientNew.setSerializable(args.newClientCheckSerializable);
+            if (args.newClientCheckSerializable != null) {
+                storageClientNew.setSerializable(args.newClientCheckSerializable);
+            }
         }
         if (args.newServerJarFile != null) {
             storageServerNew = new Classpath(args.newServerJarFile, args.newServerNests, args.newServerLibs);
-            storageServerNew.setSerializable(args.newServerCheckSerializable);
+            if (args.newServerCheckSerializable != null) {
+                storageServerNew.setSerializable(args.newServerCheckSerializable);
+            }
         }
 
         try {
@@ -213,7 +229,7 @@ public class IntermediaryUtil
 
         List<File> oldJarFiles = new ArrayList<>();
         List<List<File>> oldLibs = new ArrayList<>();
-        boolean[] oldCheckSerializable;
+        Boolean[] oldCheckSerializable;
         File newJarFile;
         File newNests;
         List<File> newLibs = new ArrayList<>();
@@ -333,7 +349,7 @@ public class IntermediaryUtil
         }
 
         public MergedArgs build() {
-            args.oldCheckSerializable = Booleans.toArray(oldCheckSerializable);
+            args.oldCheckSerializable = oldCheckSerializable.toArray(new Boolean[oldCheckSerializable.size()]);
             args.invertMatches = Booleans.toArray(invertMatches);
             return args;
         }
@@ -343,18 +359,18 @@ public class IntermediaryUtil
 
         File oldClientJarFile;
         List<File> oldClientLibs = new ArrayList<>();
-        boolean oldClientCheckSerializable;
+        Boolean oldClientCheckSerializable;
         File oldServerJarFile;
         List<File> oldServerLibs = new ArrayList<>();
-        boolean oldServerCheckSerializable;
+        Boolean oldServerCheckSerializable;
         File newClientJarFile;
         File newClientNests;
         List<File> newClientLibs = new ArrayList<>();
-        boolean newClientCheckSerializable;
+        Boolean newClientCheckSerializable;
         File newServerJarFile;
         File newServerNests;
         List<File> newServerLibs = new ArrayList<>();
-        boolean newServerCheckSerializable;
+        Boolean newServerCheckSerializable;
         File oldIntermediaryFile;
         File oldClientIntermediaryFile;
         File oldServerIntermediaryFile;
