@@ -27,10 +27,12 @@ public abstract class AbstractJarEntry
     protected String name;
     protected String parentName;
     protected int access;
+    protected Side side;
 
     public AbstractJarEntry(String name, String parentName) {
         this.name = name;
         this.parentName = parentName;
+        this.side = Side.ALL;
     }
 
     public int getAccess() {
@@ -47,6 +49,20 @@ public abstract class AbstractJarEntry
 
     public String getParentName() {
         return parentName;
+    }
+
+    public Side getSide() {
+        return side;
+    }
+
+    public boolean isOneSideOnly() {
+        return side != Side.ALL;
+    }
+
+    void setSide(Side side) {
+        if (side != null && side != Side.ANY) {
+            this.side = side;
+        }
     }
 
     protected String getKey() {

@@ -69,7 +69,7 @@ public class JarMethodEntry extends AbstractJarEntry
 
         Set<JarClassEntry> entries = StitchUtil.newIdentityHashSet();
         entries.add(c);
-        getMatchingSources(entries, storage, c);
+        getMatchingSources(entries, storage, c, c.isOneSideOnly() ? c.side : side);
         return entries.size() == 1;
     }
 
@@ -87,7 +87,7 @@ public class JarMethodEntry extends AbstractJarEntry
             lastSize = entries.size();
 
             for (JarClassEntry cc : entries) {
-                getMatchingSources(entriesNew, storage, cc);
+                getMatchingSources(entriesNew, storage, cc, Side.ANY);
             }
             entries.addAll(entriesNew);
             entriesNew.clear();
@@ -104,25 +104,25 @@ public class JarMethodEntry extends AbstractJarEntry
         return new ArrayList<>(entries);
     }
 
-    void getMatchingSources(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c) {
+    private void getMatchingSources(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c, Side side) {
         JarMethodEntry m = c.getMethod(getKey());
         if (m != null) {
-            if (!Access.isPrivateOrStatic(m.getAccess())) {
+            if ((c.isOneSideOnly() ? side.is(c.side) : side.is(m.side)) && !Access.isPrivateOrStatic(m.getAccess())) {
                 entries.add(c);
             }
         }
 
         JarClassEntry superClass = c.getSuperClass(storage);
         if (superClass != null) {
-            getMatchingSources(entries, storage, superClass);
+            getMatchingSources(entries, storage, superClass, side);
         }
 
         for (JarClassEntry itf : c.getInterfaces(storage)) {
-            getMatchingSources(entries, storage, itf);
+            getMatchingSources(entries, storage, itf, side);
         }
     }
 
-    void getMatchingEntries(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c, int indent) {
+    private void getMatchingEntries(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c, int indent) {
         entries.add(c);
 
         for (JarClassEntry cc : c.getSubclasses(storage)) {

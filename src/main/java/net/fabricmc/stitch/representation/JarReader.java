@@ -24,15 +24,18 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.jar.JarInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 
+import net.fabricmc.stitch.merge.ClassMerger;
 import net.fabricmc.stitch.representation.JarClassEntry.ClassEntryPopulator;
 import net.fabricmc.stitch.util.StitchUtil;
 import net.ornithemc.nester.nest.Nest;
@@ -143,17 +146,36 @@ public class JarReader
                         @Override
                         public FieldVisitor visitField(final int access, final String name, final String descriptor,
                                                        final String signature, final Object value) {
-                            fields.add(new JarFieldEntry(access, name, descriptor, signature, populator.name));
+                            JarFieldEntry field = new JarFieldEntry(access, name, descriptor, signature, populator.name);
+                            fields.add(field);
 
-                            return super.visitField(access, name, descriptor, signature, value);
+                            return new FieldVisitor(StitchUtil.ASM_VERSION, super.visitField(access, name, descriptor, signature, value)) {
+
+                                @Override
+                                public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
+                                    return new EnvironmentAnnotationReader(StitchUtil.ASM_VERSION, super.visitAnnotation(descriptor, visible), descriptor, field::setSide);
+                                }
+                            };
                         }
 
                         @Override
                         public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
                                                          final String signature, final String[] exceptions) {
-                            methods.add(new JarMethodEntry(access, name, descriptor, signature, populator.name));
+                            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature, populator.name);
+                            methods.add(method);
 
-                            return super.visitMethod(access, name, descriptor, signature, exceptions);
+                            return new MethodVisitor(StitchUtil.ASM_VERSION, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+
+                                @Override
+                                public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
+                                    return new EnvironmentAnnotationReader(StitchUtil.ASM_VERSION, super.visitAnnotation(descriptor, visible), descriptor, method::setSide);
+                                }
+                            };
+                        }
+
+                        @Override
+                        public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
+                            return new EnvironmentAnnotationReader(StitchUtil.ASM_VERSION, super.visitAnnotation(descriptor, visible), descriptor, side -> populator.side = side);
                         }
 
                         @Override
@@ -283,5 +305,36 @@ public class JarReader
         reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
         return jar.getClass(reader.getClassName(), null);
+    }
+
+    private static class EnvironmentAnnotationReader extends AnnotationVisitor {
+
+        private final String annotationDescriptor;
+        private final Consumer<Side> setter;
+
+        private Boolean parseValue;
+
+        EnvironmentAnnotationReader(int api, AnnotationVisitor annotationVisitor, String descriptor, Consumer<Side> setter) {
+            super(api, annotationVisitor);
+
+            this.annotationDescriptor = descriptor;
+            this.setter = setter;
+        }
+
+        @Override
+        public void visitEnum(final String name, final String descriptor, final String value) {
+            if (parseValue == null) {
+                parseValue = ClassMerger.SIDED_DESCRIPTOR.equals(annotationDescriptor);
+            }
+
+            if (parseValue && "value".equals(name) && ClassMerger.SIDE_DESCRIPTOR.equals(descriptor)) {
+                if ("CLIENT".equals(value)) {
+                    setter.accept(Side.CLIENT);
+                }
+                if ("SERVER".equals(value)) {
+                    setter.accept(Side.SERVER);
+                }
+            }
+        }
     }
 }

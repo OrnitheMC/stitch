@@ -62,6 +62,7 @@ public class JarClassEntry extends AbstractJarEntry
 
     protected void populate(ClassEntryPopulator populator) {
         this.setAccess(populator.access);
+        this.setSide(populator.side);
         if (populator.nested) {
             this.declaringClass = populator.declaringClassName;
             this.enclosingClass = populator.enclosingClassName;
@@ -310,6 +311,7 @@ public class JarClassEntry extends AbstractJarEntry
     {
         public int access;
         public String name;
+        public Side side;
         public boolean nested;
         public String declaringClassName;
         public String enclosingClassName;

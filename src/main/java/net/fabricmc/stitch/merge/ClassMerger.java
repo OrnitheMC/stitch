@@ -23,10 +23,10 @@ import org.objectweb.asm.tree.*;
 import java.util.*;
 
 public class ClassMerger {
-    private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/EnvType;";
+    public static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/EnvType;";
     private static final String ITF_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterface;";
     private static final String ITF_LIST_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterfaces;";
-    private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Environment;";
+    public static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Environment;";
 
     private abstract static class Merger<T> {
         private final Map<String, T> entriesClient, entriesServer;
