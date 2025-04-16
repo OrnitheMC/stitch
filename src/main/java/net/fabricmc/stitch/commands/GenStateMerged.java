@@ -176,12 +176,6 @@ public class GenStateMerged extends GenState
                 }
             }
         }
-
-        for (JarClassEntry mc : ccList) {
-            for (Pair<JarClassEntry, String> pair : mc.getRelatedMethods(m)) {
-                findNames(storage, storageOld, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), newToOld, oldToIntermediary, names, usedMethods);
-            }
-        }
     }
 
     private String inheritMethodName(Classpath storage, Classpath storagesOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary) {

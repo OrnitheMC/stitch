@@ -331,12 +331,6 @@ public class GenStateSplit extends GenState
                 }
             }
         }
-
-        for (JarClassEntry mc : ccList) {
-            for (Pair<JarClassEntry, String> pair : mc.getRelatedMethods(m)) {
-                findNames(storage, storageOld, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), names, usedMethods, newToOld, oldToIntermediary);
-            }
-        }
     }
 
     private String handleMethodConflicts(String side, Map<JarMethodEntry, String> methodNames, Map<String, Set<String>> names, Set<JarMethodEntry> allEntries) {

@@ -17,8 +17,6 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.util.Pair;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,8 +27,6 @@ public class JarClassEntry extends AbstractJarEntry
     final Map<String, JarClassEntry> innerClasses;
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
-    final Map<String, Set<Pair<JarClassEntry, String>>> relatedMethods;
-    final Map<String, JarClassEntry> siblings;
     /** outer class for inner classes */
     String declaringClass;
     /** outer class for anonymous and local classes */
@@ -53,8 +49,6 @@ public class JarClassEntry extends AbstractJarEntry
         this.innerClasses = new TreeMap<>(Comparator.naturalOrder());
         this.fields = new TreeMap<>(Comparator.naturalOrder());
         this.methods = new TreeMap<>(Comparator.naturalOrder());
-        this.relatedMethods = new HashMap<>();
-        this.siblings = new TreeMap<>(Comparator.naturalOrder());
 
         this.subclasses = new ArrayList<>();
         this.implementers = new ArrayList<>();
@@ -108,22 +102,6 @@ public class JarClassEntry extends AbstractJarEntry
         if (enclosingEntry != null) {
             enclosingEntry.innerClasses.put(name, this);
         }
-    }
-
-    protected void populateSiblings(JarRootEntry storage) {
-        String packageName = getPackageName();
-
-        for (JarClassEntry classEntry : storage.getClasses()) {
-            if (classEntry.getPackageName().equals(packageName)) {
-                classEntry.siblings.put(name, this);
-            }
-        }
-    }
-
-    // unstable
-    public Collection<Pair<JarClassEntry, String>> getRelatedMethods(JarMethodEntry m) {
-        //noinspection unchecked
-        return relatedMethods.getOrDefault(m.getKey(), Collections.EMPTY_SET);
     }
 
     public String getSignature() {
@@ -245,10 +223,6 @@ public class JarClassEntry extends AbstractJarEntry
         return methods.get(name);
     }
 
-    public JarClassEntry getSibling(String name) {
-        return siblings.get(name);
-    }
-
     public Collection<JarClassEntry> getInnerClasses() {
         return innerClasses.values();
     }
@@ -259,10 +233,6 @@ public class JarClassEntry extends AbstractJarEntry
 
     public Collection<JarMethodEntry> getMethods() {
         return methods.values();
-    }
-
-    public Collection<JarClassEntry> getSiblings() {
-        return siblings.values();
     }
 
     public boolean isInterface() {
