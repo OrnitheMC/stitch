@@ -33,22 +33,8 @@ public class GenStateMerged extends GenState
 {
     private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
     private List<GenMap> oldToIntermediary = new ArrayList<>(), newToOld = new ArrayList<>();
-    private GenMap newToIntermediary;
 
     public void generate(File file, Classpath storage, List<Classpath> storagesOld) throws IOException {
-        if (file.exists()) {
-            System.err.println("Target file exists - loading...");
-            newToIntermediary = new GenMap();
-            try (FileInputStream inputStream = new FileInputStream(file)) {
-                //noinspection deprecation
-                newToIntermediary.load(
-                      MappingsProvider.readTinyMappings(inputStream),
-                      "official",
-                      targetNamespace
-                );
-            }
-        }
-
         try (FileWriter fileWriter = new FileWriter(file)) {
             try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
                 writer.write(String.format("v1\tofficial\t%s\n", targetNamespace));
@@ -83,20 +69,6 @@ public class GenStateMerged extends GenState
             return null;
         }
 
-        if (newToIntermediary != null) {
-            //noinspection deprecation
-            EntryTriple findEntry = newToIntermediary.getField(c.getName(), f.getName(), f.getDescriptor());
-            if (findEntry != null) {
-                if (findEntry.getName().contains("f_")) {
-                    return findEntry.getName();
-                } else {
-                    String newName = next(f, "f");
-                    System.out.println(findEntry.getName() + " is now " + newName);
-                    return newName;
-                }
-            }
-        }
-
         if (!newToOld.isEmpty()) {
             String findName = null;
 
@@ -129,25 +101,17 @@ public class GenStateMerged extends GenState
             return;
         }
 
-        String suffix = "." + m.getName() + m.getDescriptor();
+        if (newToOld != null) {
+            String suffix = "." + m.getName() + m.getDescriptor();
 
-        if ((m.getAccess() & Opcodes.ACC_BRIDGE) != 0) {
-            suffix += "(bridge)";
-        }
-
-        List<JarClassEntry> ccList = m.getMatchingEntries(storage, c);
-
-        for (JarClassEntry cc : ccList) {
-            EntryTriple findEntry = null;
-            if (newToIntermediary != null) {
-                findEntry = newToIntermediary.getMethod(cc.getName(), m.getName(), m.getDescriptor());
-                if (findEntry != null) {
-                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                }
+            if ((m.getAccess() & Opcodes.ACC_BRIDGE) != 0) {
+                suffix += "(bridge)";
             }
 
-            if (findEntry == null && newToOld != null) {
-                findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
+            List<JarClassEntry> ccList = m.getMatchingEntries(storage, c);
+
+            for (JarClassEntry cc : ccList) {
+                EntryTriple findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
                     JarMethodEntry oldMethod = (oldClass == null) ? null : oldClass.getMethod(findEntry.getName() + findEntry.getDesc());
@@ -246,7 +210,7 @@ public class GenStateMerged extends GenState
             return methodNames.get(m);
         }
 
-        if (!newToOld.isEmpty() || newToIntermediary != null) {
+        if (!newToOld.isEmpty()) {
             String findName = null;
 
             for (int i = 0; i < newToOld.size(); i++) {
@@ -296,20 +260,6 @@ public class GenStateMerged extends GenState
                 throw new IllegalStateException("don't know what to do with class " + fullName);
             } else {
                 cname = null;
-
-                if (newToIntermediary != null) {
-                    String findName = newToIntermediary.getClass(fullName);
-                    if (findName != null) {
-                        // the names we generate follow the standard convention for inner class names,
-                        // so we can safely find the inner name like this
-                        String[] r = findName.split("\\$");
-                        if (r.length > 1) {
-                            cname = stripLocalClassPrefix(r[r.length - 1]);
-                        } else {
-                            cname = stripPackageName(findName);
-                        }
-                    }
-                }
 
                 if (cname == null && !newToOld.isEmpty()) {
                     Pair<String, String> findName = null;
