@@ -69,7 +69,15 @@ public abstract class AbstractJarEntry
         return name;
     }
 
+    public char getPrefix() {
+        throw new UnsupportedOperationException();
+    }
+
     public boolean isSerializable(Classpath storage) {
+        return false;
+    }
+
+    public boolean isMainJar(Classpath storage) {
         return false;
     }
 
@@ -96,6 +104,6 @@ public abstract class AbstractJarEntry
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(" + getKey() + ")";
+        return getKey();
     }
 }

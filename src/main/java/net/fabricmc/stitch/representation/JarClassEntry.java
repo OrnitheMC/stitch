@@ -76,7 +76,7 @@ public class JarClassEntry extends AbstractJarEntry
             JarClassEntry superEntry = storage.findClass(superclass);
             if (superEntry != null) {
                 superEntry.subclasses.add(name);
-                if (superEntry.jar != storage.getJar()) {
+                if (!superEntry.isMainJar(storage)) {
                     superEntry.populateParents(storage);
                 }
             }
@@ -86,10 +86,16 @@ public class JarClassEntry extends AbstractJarEntry
             JarClassEntry itf = storage.findClass(interfaces.get(i));
             if (itf != null) {
                 itf.implementers.add(name);
-                if (itf.jar != storage.getJar()) {
+                if (!itf.isMainJar(storage)) {
                     itf.populateParents(storage);
                 }
             }
+        }
+    }
+
+    protected void populateSpecializedMethods(Classpath storage) {
+        for (JarMethodEntry method : methods.values()) {
+            method.findSpecializedMethod(storage);
         }
     }
 
@@ -170,6 +176,23 @@ public class JarClassEntry extends AbstractJarEntry
 
     public List<JarClassEntry> getInterfaces(Classpath storage) {
         return toClassEntryList(storage, interfaces);
+    }
+
+    public List<JarClassEntry> getSuperClasses(Classpath storage) {
+        List<JarClassEntry> classes = new ArrayList<>();
+
+        JarClassEntry superClass = getSuperClass(storage);
+        if (superClass != null) {
+            classes.add(superClass);
+        }
+        classes.addAll(getInterfaces(storage));
+
+        return classes;
+    }
+
+    @Override
+    public char getPrefix() {
+        return 'C';
     }
 
     @Override
@@ -275,6 +298,11 @@ public class JarClassEntry extends AbstractJarEntry
 
         JarClassEntry superClass = storage.getClass(superclass);
         return superClass != null && superClass.isSerializable(storage);
+    }
+
+    @Override
+    public boolean isMainJar(Classpath storage) {
+        return jar.isMainJar(storage);
     }
 
     public static final class ClassEntryPopulator

@@ -17,17 +17,18 @@
 
 package net.fabricmc.stitch.commands;
 
+import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.representation.*;
 import net.fabricmc.stitch.util.StitchUtil;
 
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public class GenState
 {
-    final Map<AbstractJarEntry, String> values = new IdentityHashMap<>();
     final Scanner scanner = new Scanner(System.in);
     final List<Pattern> obfuscatedPatterns = new ArrayList<>();
     String defaultPackage = "net/minecraft/";
@@ -87,46 +88,81 @@ public class GenState
     public void setWriteAll() {
     }
 
-    String next(AbstractJarEntry entry, String prefix) {
-        return prefix + "_" + values.computeIfAbsent(entry, (e) -> {
-            BigInteger bigInt = new BigInteger(e.getHash());
-            StringBuilder builder = new StringBuilder();
+    String genName(AbstractJarEntry entry, AbstractJarEntry... entries) {
+        StringBuilder builder = new StringBuilder();
 
-            for (int i = 0; i < nameLength; i++) {
-                int digit = bigInt.mod(BigInteger.valueOf(10)).intValue();
-                bigInt = bigInt.divide(BigInteger.valueOf(10));
+        builder.append(entry.getPrefix());
+        builder.append('_');
 
-                builder.insert(0, (char) ('0' + digit));
-            }
+        BigInteger bigInt = new BigInteger(entry.getHash());
+        for (AbstractJarEntry e : entries) {
+            bigInt = bigInt.multiply(new BigInteger(e.getHash()));
+        }
 
-            return builder.toString();
-        });
+        for (int i = 0; i < nameLength; i++) {
+            int digit = bigInt.mod(BigInteger.valueOf(10)).intValue();
+            bigInt = bigInt.divide(BigInteger.valueOf(10));
+
+            builder.insert(2, (char) ('0' + digit));
+        }
+
+        return builder.toString();
     }
 
-    String nextMethodName(Classpath storage, JarClassEntry c, JarMethodEntry m) {
+    String nextName(Map<AbstractJarEntry, String> values, AbstractJarEntry entry) {
+        return values.computeIfAbsent(entry, this::genName);
+    }
+
+    String nextMethodName(Map<AbstractJarEntry, String> values, Classpath storage, JarClassEntry c, JarMethodEntry m) {
         String key = m.getName() + m.getDescriptor();
-        Set<JarMethodEntry> ms = new TreeSet<>((m1, m2) -> {
-            return m1.getParentName().compareTo(m2.getParentName());
-        });
+        Set<JarMethodEntry> ms = new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
 
         findSourceMethod(storage, c, key, ms);
 
         if (ms.isEmpty()) {
             // method is most likely private or static
-            return next(m, "m");
+            return nextName(values, m);
         }
 
         Iterator<JarMethodEntry> it = ms.iterator();
         JarMethodEntry pm = it.next();
 
-        String name = next(pm, "m");
-        String suf = name.substring(2);
+        String name;
+
+        if (pm.isMainJar(storage)) {
+            name = nextName(values, pm);
+        } else {
+            name = pm.getName();
+        }
 
         while (it.hasNext()) {
-            values.put(it.next(), suf);
+            values.put(it.next(), name);
         }
 
         return name;
+    }
+
+    int compareSourceMethods(Classpath storage, JarMethodEntry m1, JarMethodEntry m2) {
+        boolean main1 = m1.isMainJar(storage);
+        boolean main2 = m2.isMainJar(storage);
+        if (main1 == main2) {
+            boolean bridge1 = (m1.getBridgeMethod() != null);
+            boolean bridge2 = (m2.getBridgeMethod() != null);
+            if (bridge1 == bridge2) {
+                int c0 = m1.getName().compareTo(m2.getName());
+                if (c0 == 0) {
+                    c0 = m1.getDescriptor().compareTo(m2.getDescriptor());
+                }
+                if (c0 == 0) {
+                    c0 = m1.getParentName().compareTo(m2.getParentName());
+                }
+                return c0;
+            } else {
+                return bridge1 ? 1 : -1;
+            }
+        } else {
+            return main1 ? 1 : -1;
+        }
     }
 
     public void setDefaultPackage(final String defaultPackage) {
@@ -154,6 +190,82 @@ public class GenState
         }
 
         this.nameLength = length;
+    }
+
+    Set<JarMethodEntry> findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names) {
+        Set<JarMethodEntry> allEntries = new HashSet<>();
+        if (newToOld != null) {
+            findNames(storage, storageOld, c, m, newToOld, oldToIntermediary, names, allEntries);
+        }
+        return allEntries;
+    }
+
+    private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
+        if (!usedMethods.add(m)) {
+            return;
+        }
+
+        String suffix = "." + m.getName() + m.getDescriptor();
+
+        if (m.getSpecializedMethod() != null) {
+            suffix += "(bridge)";
+        }
+
+        List<JarClassEntry> matchingClasses = m.getMatchingEntries(storage, c);
+
+        for (JarClassEntry matchingClass : matchingClasses) {
+            JarMethodEntry matchingMethod = matchingClass.getMethod(m.getName() + m.getDescriptor());
+            if (matchingMethod != null) {
+                JarMethodEntry bridgeMethod = matchingMethod.getBridgeMethod();
+                JarMethodEntry specializedMethod = matchingMethod.getSpecializedMethod();
+                findNames(storage, storageOld, matchingClass, matchingMethod, newToOld, oldToIntermediary, names, usedMethods, suffix);
+                if (bridgeMethod != null) {
+                    findNames(storage, storageOld, matchingClass, bridgeMethod, newToOld, oldToIntermediary, names, usedMethods);
+                }
+                if (specializedMethod != null) {
+                    findNames(storage, storageOld, matchingClass, specializedMethod, newToOld, oldToIntermediary, names, usedMethods);
+                }
+            }
+        }
+    }
+
+    private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods, String suffix) {
+        EntryTriple oldEntry = newToOld.getMethod(c.getName(), m.getName(), m.getDescriptor());
+        if (oldEntry != null) {
+            JarClassEntry oldClass = storageOld.getClass(oldEntry.getOwner());
+            JarMethodEntry oldMethod = (oldClass == null) ? null : oldClass.getMethod(oldEntry.getName() + oldEntry.getDesc());
+            if (oldMethod != null && !isSerializable(storageOld, oldMethod)) {
+                EntryTriple intermediaryEntry = oldToIntermediary.getMethod(oldEntry);
+                if (intermediaryEntry != null) {
+                    names.computeIfAbsent(intermediaryEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, c) + suffix);
+                } else {
+                    if (!isMappedMethodName(oldEntry.getName())) {
+                        names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, c) + suffix);
+                    } else {
+                        // more involved...
+                        JarMethodEntry bridgeMethod = oldMethod.getBridgeMethod();
+                        JarMethodEntry specializedMethod = oldMethod.getSpecializedMethod();
+                        findNames(storageOld, oldClass, oldMethod, oldToIntermediary, names, suffix);
+                        if (bridgeMethod != null) {
+                            findNames(storageOld, oldClass, bridgeMethod, oldToIntermediary, names, suffix);
+                        }
+                        if (specializedMethod != null) {
+                            findNames(storageOld, oldClass, specializedMethod, oldToIntermediary, names, suffix);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void findNames(Classpath storage, JarClassEntry c, JarMethodEntry m, GenMap oldToIntermediary, Map<String, Set<String>> names, String suffix) {
+        List<JarClassEntry> matchingClasses = m.getMatchingEntries(storage, c);
+        for (JarClassEntry matchingClass : matchingClasses) {
+            EntryTriple intermediaryEntry = oldToIntermediary.getMethod(matchingClass.getName(), m.getName(), m.getDescriptor());
+            if (intermediaryEntry != null) {
+                names.computeIfAbsent(intermediaryEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, matchingClass) + suffix);
+            }
+        }
     }
 
     String getPropagation(Classpath storage, JarClassEntry classEntry) {
@@ -206,6 +318,20 @@ public class GenState
         }
         for (JarClassEntry ci : c.getImplementers(storage)) {
             findEquivalentMethods(storage, ci, key, methods);
+        }
+
+        JarMethodEntry m = c.getMethod(key);
+
+        if (m != null) {
+            JarMethodEntry bm = m.getBridgeMethod();
+            JarMethodEntry sm = m.getSpecializedMethod();
+
+            if (bm != null) {
+                findSourceMethod(storage, c, bm.getName() + bm.getDescriptor(), methods);
+            }
+            if (sm != null) {
+                findSourceMethod(storage, c, sm.getName() + sm.getDescriptor(), methods);
+            }
         }
     }
 

@@ -33,7 +33,10 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 import net.fabricmc.stitch.merge.ClassMerger;
 import net.fabricmc.stitch.representation.JarClassEntry.ClassEntryPopulator;
@@ -90,11 +93,15 @@ public class JarReader
         this.classpath.getJar().getAllClasses().forEach((c) -> c.populateParents(this.classpath));
         System.err.println("Populated subclass entries.");
 
-        // Stage 3: find inner classes
+        // Stage 3: find specialized methods
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateSpecializedMethods(this.classpath));
+        System.err.println("Populated specialized method entries.");
+
+        // Stage 4: find inner classes
         this.classpath.getJar().getAllClasses().forEach((c) -> c.populateInnerClasses(this.classpath.getJar()));
         System.err.println("Populated inner class entries.");
 
-        // Stage 4: hashing
+        // Stage 5: hashing
         this.classpath.getJar().hash(salt);
         System.err.println("Hashed jar entries.");
 
@@ -162,9 +169,95 @@ public class JarReader
 
                             return new MethodVisitor(StitchUtil.ASM_VERSION, super.visitMethod(access, name, descriptor, signature, exceptions)) {
 
+                                private int invocations;
+                                private boolean potentialBridge = true;
+                                private String potentialSpecializedMethod;
+
                                 @Override
                                 public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
                                     return new EnvironmentAnnotationReader(StitchUtil.ASM_VERSION, super.visitAnnotation(descriptor, visible), descriptor, method::setSide);
+                                }
+
+                                @Override
+                                public void visitInsn(int opcode) {
+                                    switch (opcode) {
+                                    case Opcodes.IRETURN:
+                                    case Opcodes.LRETURN:
+                                    case Opcodes.FRETURN:
+                                    case Opcodes.DRETURN:
+                                    case Opcodes.ARETURN:
+                                    case Opcodes.RETURN:
+                                        break;
+                                    default:
+                                        potentialBridge = false;
+                                    }
+                                }
+
+                                @Override
+                                public void visitIntInsn(int opcode, int operand) {
+                                    potentialBridge = false;
+                                }
+
+                                @Override
+                                public void visitVarInsn(int opcode, int varIndex) {
+                                    switch (opcode) {
+                                    case Opcodes.ILOAD:
+                                    case Opcodes.LLOAD:
+                                    case Opcodes.FLOAD:
+                                    case Opcodes.DLOAD:
+                                    case Opcodes.ALOAD:
+                                        break;
+                                    default:
+                                        potentialBridge = false;
+                                    }
+                                }
+
+                                @Override
+                                public void visitTypeInsn(int opcode, String type) {
+                                    if (opcode != Opcodes.CHECKCAST) {
+                                        potentialBridge = false;
+                                    }
+                                }
+
+                                @Override
+                                public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+                                    potentialBridge = false;
+                                }
+
+                                @Override
+                                public void visitMethodInsn(int opcode, String invokedMethodOwner, String invokedMethodName, String invokedMethodDescriptor, boolean isInterface) {
+                                    switch (opcode) {
+                                    case Opcodes.INVOKEINTERFACE:
+                                    case Opcodes.INVOKESPECIAL:
+                                    case Opcodes.INVOKEVIRTUAL:
+                                        if (++invocations == 1) {
+                                            if (invokedMethodOwner.equals(populator.name) && !invokedMethodDescriptor.equals(descriptor)) {
+                                                potentialSpecializedMethod = invokedMethodName + invokedMethodDescriptor;
+                                            }
+                                        } else {
+                                            potentialBridge = false;
+                                        }
+                                        break;
+                                    default:
+                                        potentialBridge = false;
+                                    }
+                                }
+
+                                @Override
+                                public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
+                                    potentialBridge = false;
+                                }
+
+                                @Override
+                                public void visitJumpInsn(int opcode, Label label) {
+                                    potentialBridge = false;
+                                }
+
+                                @Override
+                                public void visitEnd() {
+                                    if (potentialBridge && potentialSpecializedMethod != null) {
+                                        method.setSpecializedMethod(potentialSpecializedMethod);
+                                    }
                                 }
                             };
                         }
@@ -213,7 +306,7 @@ public class JarReader
                             super.visitEnd();
                         }
                     };
-                    reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                    reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }
         }

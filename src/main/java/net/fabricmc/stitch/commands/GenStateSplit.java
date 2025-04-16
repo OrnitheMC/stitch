@@ -24,7 +24,6 @@ import net.fabricmc.stitch.util.MatcherUtil;
 import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.objectweb.asm.Opcodes;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -33,8 +32,10 @@ import java.util.stream.Collectors;
 
 public class GenStateSplit extends GenState
 {
-    final Map<JarMethodEntry, String> clientMethodNames = new IdentityHashMap<>();
-    final Map<JarMethodEntry, String> serverMethodNames = new IdentityHashMap<>();
+    private final Map<AbstractJarEntry, String> clientValues = new IdentityHashMap<>();
+    private final Map<AbstractJarEntry, String> serverValues = new IdentityHashMap<>();
+    private final Map<JarMethodEntry, String> clientMethodNames = new IdentityHashMap<>();
+    private final Map<JarMethodEntry, String> serverMethodNames = new IdentityHashMap<>();
     private GenMap clientOldToIntermediary = new GenMap(), serverOldToIntermediary = new GenMap(), clientNewToOld = new GenMap(), serverNewToOld = new GenMap(), clientToServer = new GenMap();
 
     public void generate(File file, Classpath storageClient, Classpath storageServer, Classpath storageClientOld, Classpath storageServerOld) throws IOException {
@@ -101,18 +102,18 @@ public class GenStateSplit extends GenState
         if (sw != null) sw.close();
     }
 
-    private String next(AbstractJarEntry centry, AbstractJarEntry sentry, String prefix) {
-        if (centry == null) {
-            return next(sentry, prefix);
-        }
+    private String nextName(AbstractJarEntry centry, AbstractJarEntry sentry) {
         if (sentry == null) {
-            return next(centry, prefix);
+            return nextName(clientValues, centry);
+        }
+        if (centry == null) {
+            return nextName(serverValues, sentry);
         }
 
         String name = null;
 
-        String cname = values.get(centry);
-        String sname = values.get(sentry);
+        String cname = clientValues.get(centry);
+        String sname = serverValues.get(sentry);
 
         if (cname != null && sname != null && !cname.equals(sname)) {
             throw new RuntimeException("conflict in names generated for client and server entry: (" + centry + ", " + sentry + ") -> (" + cname + ", " + sname + ")");
@@ -125,49 +126,34 @@ public class GenStateSplit extends GenState
         }
 
         if (name == null) {
-            BigInteger cint = new BigInteger(centry.getHash());
-            BigInteger sint = new BigInteger(sentry.getHash());
-            BigInteger bigInt = cint.multiply(sint);
-            StringBuilder builder = new StringBuilder();
+            name = genName(centry, sentry);
 
-            for (int i = 0; i < nameLength; i++) {
-                int digit = bigInt.mod(BigInteger.valueOf(10)).intValue();
-                bigInt = bigInt.divide(BigInteger.valueOf(10));
-
-                builder.insert(0, (char) ('0' + digit));
-            }
-
-            name = builder.toString();
-
-            values.put(centry, name);
-            values.put(sentry, name);
+            clientValues.put(centry, name);
+            serverValues.put(sentry, name);
         }
 
-        return prefix + "_" + name;
+        return name;
     }
 
     private String nextMethodName(Classpath storageClient, Classpath storageServer, JarClassEntry cc, JarClassEntry sc, JarMethodEntry cm, JarMethodEntry sm) {
-        if (cm == null) {
-            return nextMethodName(storageServer, sc, sm);
-        }
         if (sm == null) {
-            return nextMethodName(storageClient, cc, cm);
+            return nextMethodName(clientValues, storageClient, cc, cm);
+        }
+        if (cm == null) {
+            return nextMethodName(serverValues, storageServer, sc, sm);
         }
 
         String ckey = cm.getName() + cm.getDescriptor();
         String skey = sm.getName() + sm.getDescriptor();
-        Comparator<JarMethodEntry> comp = (m1, m2) -> {
-            return m1.getParentName().compareTo(m2.getParentName());
-        };
-        Set<JarMethodEntry> cms = new TreeSet<>(comp);
-        Set<JarMethodEntry> sms = new TreeSet<>(comp);
+        Set<JarMethodEntry> cms = new TreeSet<>((m1, m2) -> compareSourceMethods(storageClient, m1, m2));
+        Set<JarMethodEntry> sms = new TreeSet<>((m1, m2) -> compareSourceMethods(storageServer, m1, m2));
 
         findSourceMethod(storageClient, cc, ckey, cms);
         findSourceMethod(storageServer, sc, skey, sms);
 
         if (cms.isEmpty() && sms.isEmpty()) {
             // method is most likely private or static
-            return next(cm, sm, "m");
+            return nextName(cm, sm);
         }
         if (cms.isEmpty() || sms.isEmpty()) {
             throw new RuntimeException("incompatible method inheritance: client[" + cm + "](" + String.join(", ", cms.stream().map(Object::toString).collect(Collectors.toList())) + ") - server[" + sm + "](" + String.join(", ", sms.stream().map(Object::toString).collect(Collectors.toList())) + ")");
@@ -187,21 +173,35 @@ public class GenStateSplit extends GenState
                 JarMethodEntry findMtd = findCls.getMethod(findEntry.getName() + findEntry.getDesc());
                 if (findMtd != spm) {
 //                    throw new RuntimeException("incompatible method sources (server -> src)[" + sm + " -> " + spm + "] and matches (client -> server)[" + cpm + " -> " + findMtd + "]");
-                    name = next(cm, sm, "m");
+                    name = nextName(cm, sm);
                 }
             }
         }
         if (name == null) {
-            name = next(cpm, spm, "m");
+            boolean cmain = cpm.isMainJar(storageClient);
+            boolean smain = spm.isMainJar(storageServer);
+            if (cmain && smain) {
+                name = nextName(cpm, spm);
+            } else {
+                if (!cmain && !smain) {
+                    if (!cpm.getName().equals(spm.getName())) {
+                        throw new RuntimeException("incompatible library method sources: client[" + cm + "] - server[" + sm + "]");
+                    }
+                }
+                if (!cmain) {
+                    name = cpm.getName();
+                }
+                if (!smain) {
+                    name = spm.getName();
+                }
+            }
         }
-
-        String suf = name.substring(2);
 
         while (cit.hasNext()) {
-            values.put(cit.next(), suf);
+            clientValues.put(cit.next(), name);
         }
         while (sit.hasNext()) {
-            values.put(sit.next(), suf);
+            serverValues.put(sit.next(), name);
         }
 
         return name;
@@ -259,7 +259,7 @@ public class GenStateSplit extends GenState
             return sname;
         }
 
-        String name = next(cf, sf, "f");
+        String name = nextName(cf, sf);
 
         return name;
     }
@@ -279,58 +279,6 @@ public class GenStateSplit extends GenState
             }
         }
         return null;
-    }
-
-    private Set<JarMethodEntry> findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names, GenMap newToOld, GenMap oldToIntermediary) {
-        Set<JarMethodEntry> allEntries = new HashSet<>();
-        findNames(storage, storageOld, c, m, names, allEntries, newToOld, oldToIntermediary);
-        return allEntries;
-    }
-
-    private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods, GenMap newToOld, GenMap oldToIntermediary) {
-        if (m == null || !usedMethods.add(m)) {
-            return;
-        }
-
-        String suffix = "." + m.getName() + m.getDescriptor();
-
-        if ((m.getAccess() & Opcodes.ACC_BRIDGE) != 0) {
-            suffix += "(bridge)";
-        }
-
-        List<JarClassEntry> ccList = m.getMatchingEntries(storage, c);
-
-        for (JarClassEntry cc : ccList) {
-            if (newToOld != null) {
-                EntryTriple findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
-                if (findEntry != null) {
-                    JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-                    JarMethodEntry oldMethod = (oldClass == null) ? null : oldClass.getMethod(findEntry.getName() + findEntry.getDesc());
-                    if (oldMethod != null && !isSerializable(storageOld, oldMethod)) {
-                        EntryTriple oldEntry = findEntry;
-                        findEntry = oldToIntermediary.getMethod(oldEntry);
-                        if (findEntry != null) {
-                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                        } else {
-                            if (!isMappedMethodName(oldEntry.getName())) {
-                                names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                            } else {
-                                // more involved...
-                                JarMethodEntry oldM = oldClass.getMethod(oldEntry.getName() + oldEntry.getDesc());
-                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldClass);
-
-                                for (JarClassEntry ccc : cccList) {
-                                    findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
-                                    if (findEntry != null) {
-                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private String handleMethodConflicts(String side, Map<JarMethodEntry, String> methodNames, Map<String, Set<String>> names, Set<JarMethodEntry> allEntries) {
@@ -366,11 +314,12 @@ public class GenStateSplit extends GenState
                 }
 
                 if (i >= 1 && i <= nameList.size()) {
+                    String name = nameList.get(i - 1);
                     for (JarMethodEntry mm : allEntries) {
-                        methodNames.put(mm, nameList.get(i - 1));
+                        methodNames.put(mm, name);
                     }
-                    System.out.println("OK!");
-                    return nameList.get(i - 1);
+                    System.out.println("OK! chose " + name);
+                    return name;
                 }
             }
         } else if (names.size() == 1) {
@@ -402,8 +351,8 @@ public class GenStateSplit extends GenState
 
         Map<String, Set<String>> clientNames = new HashMap<>();
         Map<String, Set<String>> serverNames = new HashMap<>();
-        Set<JarMethodEntry> clientEntries = findNames(storageClient, storageClientOld, cc, cm, clientNames, clientNewToOld, clientOldToIntermediary);
-        Set<JarMethodEntry> serverEntries = findNames(storageServer, storageServerOld, sc, sm, serverNames, serverNewToOld, serverOldToIntermediary);
+        Set<JarMethodEntry> clientEntries = findNames(storageClient, storageClientOld, cc, cm, clientNewToOld, clientOldToIntermediary, clientNames);
+        Set<JarMethodEntry> serverEntries = findNames(storageServer, storageServerOld, sc, sm, serverNewToOld, serverOldToIntermediary, serverNames);
 
         String cname = (cm == null) ? null : handleMethodConflicts("[client]", clientMethodNames, clientNames, clientEntries);
         String sname = (sm == null) ? null : handleMethodConflicts("[server]", serverMethodNames, serverNames, serverEntries);
@@ -525,7 +474,7 @@ public class GenStateSplit extends GenState
                 }
 
                 if (iname == null) {
-                    iname = next(cc, sc, "C");
+                    iname = nextName(cc, sc);
                 }
             }
         }

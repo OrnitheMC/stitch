@@ -66,6 +66,11 @@ public class JarRootEntry extends AbstractJarEntry
     }
 
     @Override
+    public boolean isMainJar(Classpath storage) {
+        return this == storage.getJar();
+    }
+
+    @Override
     public void hash(byte[] salt) {
         super.hash(salt);
 

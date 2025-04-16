@@ -24,13 +24,13 @@ import net.fabricmc.stitch.util.MatcherUtil;
 import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.objectweb.asm.Opcodes;
 
 import java.io.*;
 import java.util.*;
 
 public class GenStateMerged extends GenState
 {
+    private final Map<AbstractJarEntry, String> values = new IdentityHashMap<>();
     private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
     private List<GenMap> oldToIntermediary = new ArrayList<>(), newToOld = new ArrayList<>();
 
@@ -44,6 +44,14 @@ public class GenStateMerged extends GenState
                 }
             }
         }
+    }
+
+    private String nextName(AbstractJarEntry entry) {
+        return nextName(values, entry);
+    }
+
+    private String nextMethodName(Classpath storage, JarClassEntry c, JarMethodEntry m) {
+        return nextMethodName(values, storage, c, m);
     }
 
     private String inheritFieldName(Classpath storage, Classpath storageOld, JarClassEntry c, JarFieldEntry f, GenMap newToOld, GenMap oldToIntermediary) {
@@ -87,59 +95,7 @@ public class GenStateMerged extends GenState
             }
         }
 
-        return next(f, "f");
-    }
-
-    private Set<JarMethodEntry> findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names) {
-        Set<JarMethodEntry> allEntries = new HashSet<>();
-        findNames(storage, storageOld, c, m, newToOld, oldToIntermediary, names, allEntries);
-        return allEntries;
-    }
-
-    private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
-        if (!usedMethods.add(m)) {
-            return;
-        }
-
-        if (newToOld != null) {
-            String suffix = "." + m.getName() + m.getDescriptor();
-
-            if ((m.getAccess() & Opcodes.ACC_BRIDGE) != 0) {
-                suffix += "(bridge)";
-            }
-
-            List<JarClassEntry> ccList = m.getMatchingEntries(storage, c);
-
-            for (JarClassEntry cc : ccList) {
-                EntryTriple findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
-                if (findEntry != null) {
-                    JarClassEntry oldClass = storageOld.getClass(findEntry.getOwner());
-                    JarMethodEntry oldMethod = (oldClass == null) ? null : oldClass.getMethod(findEntry.getName() + findEntry.getDesc());
-                    if (oldMethod != null && !isSerializable(storageOld, oldMethod)) {
-                        EntryTriple oldEntry = findEntry;
-                        findEntry = oldToIntermediary.getMethod(oldEntry);
-                        if (findEntry != null) {
-                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                        } else {
-                            if (!isMappedMethodName(oldEntry.getName())) {
-                                names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, cc) + suffix);
-                            } else {
-                                // more involved...
-                                JarMethodEntry oldM = oldClass.getMethod(oldEntry.getName() + oldEntry.getDesc());
-                                List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldClass);
-
-                                for (JarClassEntry ccc : cccList) {
-                                    findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
-                                    if (findEntry != null) {
-                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        return nextName(f);
     }
 
     private String inheritMethodName(Classpath storage, Classpath storagesOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary) {
@@ -177,11 +133,12 @@ public class GenStateMerged extends GenState
                 }
 
                 if (i >= 1 && i <= nameList.size()) {
+                    String name = nameList.get(i - 1);
                     for (JarMethodEntry mm : allEntries) {
-                        methodNames.put(mm, nameList.get(i - 1));
+                        methodNames.put(mm, name);
                     }
-                    System.out.println("OK!");
-                    return nameList.get(i - 1);
+                    System.out.println("OK! chose " + name);
+                    return name;
                 }
             }
         } else if (names.size() == 1) {
@@ -283,7 +240,7 @@ public class GenStateMerged extends GenState
                 }
 
                 if (cname == null) {
-                    cname = next(c, "C");
+                    cname = nextName(c);
                 }
                 // generating anonymous class names like this keeps them
                 // more consistent across versions while keeping the

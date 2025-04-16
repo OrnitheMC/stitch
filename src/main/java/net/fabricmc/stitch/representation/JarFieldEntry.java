@@ -43,6 +43,11 @@ public class JarFieldEntry extends AbstractJarEntry
     }
 
     @Override
+    public char getPrefix() {
+        return 'f';
+    }
+
+    @Override
     public boolean isSerializable(Classpath storage) {
         if (Access.isPrivate(access) && (Access.isStatic(access) || Access.isTransient(access))) {
             // these fields are specific to Serializable classes, but are static
@@ -53,5 +58,10 @@ public class JarFieldEntry extends AbstractJarEntry
 
         JarClassEntry parent = storage.getClass(parentName);
         return parent != null && parent.isSerializable(storage);
+    }
+
+    @Override
+    public boolean isMainJar(Classpath storage) {
+        return storage.getClass(parentName).isMainJar(storage);
     }
 }

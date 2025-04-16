@@ -21,10 +21,16 @@ import net.fabricmc.stitch.util.StitchUtil;
 
 import java.util.*;
 
+import org.objectweb.asm.Type;
+
 public class JarMethodEntry extends AbstractJarEntry
 {
     protected String desc;
     protected String signature;
+
+    String potentialSpecializedMethod;
+    JarMethodEntry bridgeMethod;
+    JarMethodEntry specializedMethod;
 
     protected JarMethodEntry(int access, String name, String desc, String signature, String parentName) {
         super(name, parentName);
@@ -41,9 +47,116 @@ public class JarMethodEntry extends AbstractJarEntry
         return signature;
     }
 
+    void setSpecializedMethod(String specializedMethod) {
+        potentialSpecializedMethod = specializedMethod;
+    }
+
+    public JarMethodEntry getSpecializedMethod() {
+        return specializedMethod;
+    }
+
+    public JarMethodEntry getBridgeMethod() {
+        return bridgeMethod;
+    }
+
+    void findSpecializedMethod(Classpath storage) {
+        if (potentialSpecializedMethod != null) {
+            JarClassEntry cls = storage.getClass(parentName);
+
+            if (existsInSuperClasses(storage, cls, name + desc)) {
+                int i = potentialSpecializedMethod.indexOf('(');
+                String specializedDescriptor = potentialSpecializedMethod.substring(i);
+                
+                if (isBridgeMethod(storage, desc, specializedDescriptor)) {
+                    specializedMethod = cls.methods.get(potentialSpecializedMethod);
+                    specializedMethod.bridgeMethod = this;
+                }
+            }
+        }
+    }
+
+    private static boolean existsInSuperClasses(Classpath storage, JarClassEntry cls, String method) {
+        for (JarClassEntry superClass : cls.getSuperClasses(storage)) {
+            if (superClass.methods.containsKey(method) || existsInSuperClasses(storage, superClass, method)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isBridgeMethod(Classpath storage, String bridgeDescriptor, String specializedDescriptor) {
+        Type bridgeType = Type.getType(bridgeDescriptor);
+        Type specializedType = Type.getType(specializedDescriptor);
+
+        Type[] bridgeArgTypes = bridgeType.getArgumentTypes();
+        Type bridgeReturnType = bridgeType.getReturnType();
+        Type[] specializedArgTypes = specializedType.getArgumentTypes();
+        Type specializedReturnType = specializedType.getReturnType();
+
+        if (bridgeArgTypes.length != specializedArgTypes.length) {
+            return false;
+        }
+
+        for (int i = 0; i < bridgeArgTypes.length; i++) {
+            if (!areTypesBridgeCompatible(storage, bridgeArgTypes[i], specializedArgTypes[i])) {
+                return false;
+            }
+        }
+
+        return areTypesBridgeCompatible(storage, bridgeReturnType, specializedReturnType);
+    }
+
+    private static boolean areTypesBridgeCompatible(Classpath storage, Type typeForBridge, Type typeForSpecialized) {
+        if (typeForBridge.equals(typeForSpecialized)) {
+            return true;
+        }
+        if (typeForBridge.getSort() != typeForSpecialized.getSort()) {
+            return false;
+        }
+
+        switch (typeForBridge.getSort()) {
+        case Type.OBJECT:
+            JarClassEntry clsForBridge = storage.findClass(typeForBridge.getInternalName());
+            JarClassEntry clsForSpecialized = storage.findClass(typeForSpecialized.getInternalName());
+
+            return areClassesBridgeCompatible(storage, clsForBridge, clsForSpecialized);
+        case Type.ARRAY:
+            if (typeForBridge.getDimensions() != typeForSpecialized.getDimensions()) {
+                return false;
+            }
+
+            return areTypesBridgeCompatible(storage, typeForBridge.getElementType(), typeForSpecialized.getElementType());
+        }
+
+        return false;
+    }
+
+    private static boolean areClassesBridgeCompatible(Classpath storage, JarClassEntry clsForBridge, JarClassEntry clsForSpecialized) {
+        if (clsForBridge == clsForSpecialized) {
+            return true;
+        }
+        if ("java/lang/Object".equals(clsForSpecialized.name)) {
+            return false;
+        }
+
+        for (JarClassEntry superClsForSpecialized : clsForSpecialized.getSuperClasses(storage)) {
+            if (areClassesBridgeCompatible(storage, clsForBridge, superClsForSpecialized)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     @Override
     protected String getKey() {
         return super.getKey() + desc;
+    }
+
+    @Override
+    public char getPrefix() {
+        return 'm';
     }
 
     @Override
@@ -60,6 +173,11 @@ public class JarMethodEntry extends AbstractJarEntry
 
         JarClassEntry parent = storage.getClass(parentName);
         return parent != null && parent.isSerializable(storage);
+    }
+
+    @Override
+    public boolean isMainJar(Classpath storage) {
+        return storage.getClass(parentName).isMainJar(storage);
     }
 
     public boolean isSource(Classpath storage, JarClassEntry c) {
