@@ -34,6 +34,7 @@ public class GenState
     String defaultPackage = "net/minecraft/";
     String targetNamespace = "intermediary";
     int nameLength = 6;
+    boolean propagateNames = false;
 
     public GenState() {
         this.obfuscatedPatterns.add(Pattern.compile("^[^A-Z]*$")); // Default ofbfuscation. Obfuscated names are all lowercase
@@ -116,7 +117,7 @@ public class GenState
     String nextMethodName(Map<AbstractJarEntry, String> values, Classpath storage, JarClassEntry c, JarMethodEntry m) {
         String key = m.getName() + m.getDescriptor();
         Set<JarMethodEntry> ms = new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
-        Set<JarMethodEntry> ns = new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
+        Set<JarMethodEntry> ns = propagateNames ? null : new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
 
         findSourceMethod(storage, c, key, ms, ns);
 
@@ -133,8 +134,10 @@ public class GenState
         if (pm.isMainJar(storage)) {
             // for methods from the main jar, do not propagate
             // names through bridge/specialized methods
-            it = ns.iterator();
-            pm = it.next();
+            if (!propagateNames) {
+                it = ns.iterator();
+                pm = it.next();
+            }
 
             name = nextName(values, pm);
         } else {
@@ -198,6 +201,10 @@ public class GenState
         }
 
         this.nameLength = length;
+    }
+
+    public void setPropagateMethodNames(boolean propagateNames) {
+        this.propagateNames = propagateNames;
     }
 
     Set<JarMethodEntry> findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names) {
