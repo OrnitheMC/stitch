@@ -145,10 +145,12 @@ public class GenStateSplit extends GenState
         String ckey = cm.getName() + cm.getDescriptor();
         String skey = sm.getName() + sm.getDescriptor();
         Set<JarMethodEntry> cms = new TreeSet<>((m1, m2) -> compareSourceMethods(storageClient, m1, m2));
+        Set<JarMethodEntry> cns = new TreeSet<>((m1, m2) -> compareSourceMethods(storageClient, m1, m2));
         Set<JarMethodEntry> sms = new TreeSet<>((m1, m2) -> compareSourceMethods(storageServer, m1, m2));
+        Set<JarMethodEntry> sns = new TreeSet<>((m1, m2) -> compareSourceMethods(storageServer, m1, m2));
 
-        findSourceMethod(storageClient, cc, ckey, cms);
-        findSourceMethod(storageServer, sc, skey, sms);
+        findSourceMethod(storageClient, cc, ckey, cms, cns);
+        findSourceMethod(storageServer, sc, skey, sms, sns);
 
         if (cms.isEmpty() && sms.isEmpty()) {
             // method is most likely private or static
@@ -180,8 +182,17 @@ public class GenStateSplit extends GenState
             boolean cmain = cpm.isMainJar(storageClient);
             boolean smain = spm.isMainJar(storageServer);
             if (cmain && smain) {
+                // for methods from the main jars, do not propagate
+                // names through bridge/specialized methods
+                cit = cns.iterator();
+                sit = sns.iterator();
+                cpm = cit.next();
+                spm = sit.next();
+
                 name = nextName(cpm, spm);
             } else {
+                // for methods inherited from libraries or the JDK
+                // propagate names through bridge/specialized methods
                 if (!cmain && !smain) {
                     if (!cpm.getName().equals(spm.getName())) {
                         throw new RuntimeException("incompatible library method sources: client[" + cm + "] - server[" + sm + "]");

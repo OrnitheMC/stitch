@@ -116,8 +116,9 @@ public class GenState
     String nextMethodName(Map<AbstractJarEntry, String> values, Classpath storage, JarClassEntry c, JarMethodEntry m) {
         String key = m.getName() + m.getDescriptor();
         Set<JarMethodEntry> ms = new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
+        Set<JarMethodEntry> ns = new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
 
-        findSourceMethod(storage, c, key, ms);
+        findSourceMethod(storage, c, key, ms, ns);
 
         if (ms.isEmpty()) {
             // method is most likely private or static
@@ -130,8 +131,15 @@ public class GenState
         String name;
 
         if (pm.isMainJar(storage)) {
+            // for methods from the main jar, do not propagate
+            // names through bridge/specialized methods
+            it = ns.iterator();
+            pm = it.next();
+
             name = nextName(values, pm);
         } else {
+            // for methods inherited from libraries or the JDK
+            // propagate names through bridge/specialized methods
             name = pm.getName();
         }
 
@@ -310,14 +318,14 @@ public class GenState
         return builder.toString();
     }
 
-    void findEquivalentMethods(Classpath storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods) {
-        findSourceMethod(storage, c, key, methods);
+    void findEquivalentMethods(Classpath storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods, Collection<JarMethodEntry> neighbors) {
+        findSourceMethod(storage, c, key, methods, neighbors);
 
         for (JarClassEntry cs : c.getSubclasses(storage)) {
-            findEquivalentMethods(storage, cs, key, methods);
+            findEquivalentMethods(storage, cs, key, methods, neighbors);
         }
         for (JarClassEntry ci : c.getImplementers(storage)) {
-            findEquivalentMethods(storage, ci, key, methods);
+            findEquivalentMethods(storage, ci, key, methods, neighbors);
         }
 
         JarMethodEntry m = c.getMethod(key);
@@ -327,15 +335,15 @@ public class GenState
             JarMethodEntry sm = m.getSpecializedMethod();
 
             if (bm != null) {
-                findSourceMethod(storage, c, bm.getName() + bm.getDescriptor(), methods);
+                findSourceMethod(storage, c, bm.getName() + bm.getDescriptor(), methods, null);
             }
             if (sm != null) {
-                findSourceMethod(storage, c, sm.getName() + sm.getDescriptor(), methods);
+                findSourceMethod(storage, c, sm.getName() + sm.getDescriptor(), methods, null);
             }
         }
     }
 
-    boolean findSourceMethod(Classpath storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods) {
+    boolean findSourceMethod(Classpath storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods, Collection<JarMethodEntry> neighbors) {
         JarMethodEntry m = c.getMethod(key);
 
         boolean hasMethod = false;
@@ -355,16 +363,20 @@ public class GenState
         JarClassEntry sc = c.getSuperClass(storage);
 
         if (sc != null) {
-            parentsAdded = findSourceMethod(storage, sc, key, methods) | parentsAdded;
+            parentsAdded = findSourceMethod(storage, sc, key, methods, neighbors) | parentsAdded;
         }
 
         for (JarClassEntry ic : c.getInterfaces(storage)) {
-            parentsAdded = findSourceMethod(storage, ic, key, methods) | parentsAdded;
+            parentsAdded = findSourceMethod(storage, ic, key, methods, neighbors) | parentsAdded;
         }
 
         if (!parentsAdded && hasMethod) {
             if (methods.add(m)) {
-                findEquivalentMethods(storage, c, key, methods);
+                if (neighbors != null) {
+                    neighbors.add(m);
+                }
+
+                findEquivalentMethods(storage, c, key, methods, neighbors);
             }
         }
 
