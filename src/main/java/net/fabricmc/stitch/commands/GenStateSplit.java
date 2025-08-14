@@ -26,7 +26,6 @@ import net.fabricmc.stitch.util.StitchUtil;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,7 +35,7 @@ public class GenStateSplit extends GenState
     private final Map<AbstractJarEntry, String> serverValues = new IdentityHashMap<>();
     private final Map<JarMethodEntry, String> clientMethodNames = new IdentityHashMap<>();
     private final Map<JarMethodEntry, String> serverMethodNames = new IdentityHashMap<>();
-    private GenMap clientOldToIntermediary = new GenMap(), serverOldToIntermediary = new GenMap(), clientNewToOld = new GenMap(), serverNewToOld = new GenMap(), clientToServer = new GenMap();
+    private GenMap clientOldToIntermediary, serverOldToIntermediary, clientNewToOld, serverNewToOld, clientToServer;
 
     public void generate(File file, Classpath storageClient, Classpath storageServer, Classpath storageClientOld, Classpath storageServerOld) throws IOException {
         File tmp = new File(file.getParentFile(), ".tmp");
