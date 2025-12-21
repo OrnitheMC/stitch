@@ -216,7 +216,7 @@ public class GenState
     }
 
     private void findNames(Classpath storage, Classpath storageOld, JarClassEntry c, JarMethodEntry m, GenMap newToOld, GenMap oldToIntermediary, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
-        if (!usedMethods.add(m)) {
+        if (m == null || !usedMethods.add(m)) {
             return;
         }
 
