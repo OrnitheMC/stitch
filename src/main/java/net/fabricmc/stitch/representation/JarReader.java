@@ -20,8 +20,6 @@ package net.fabricmc.stitch.representation;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -90,18 +88,24 @@ public class JarReader
         System.err.println("Read libraries.");
 
         // Stage 2: find subclasses
-        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateParents(this.classpath));
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateSubclasses(this.classpath));
         System.err.println("Populated subclass entries.");
 
-        // Stage 3: find specialized methods
-        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateSpecializedMethods(this.classpath));
-        System.err.println("Populated specialized method entries.");
-
-        // Stage 4: find inner classes
-        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateInnerClasses(this.classpath.getJar()));
+        // Stage 3: find inner classes
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateInnerClasses(this.classpath));
         System.err.println("Populated inner class entries.");
 
-        // Stage 5: hashing
+        // Stage 4: find bridge methods
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateBridgeMethods(this.classpath));
+        System.err.println("Populated bridge methods.");
+
+        // Stage 5: find method hierarchies
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateMethodHierarchies(this.classpath));
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateMethodHierarchySources(this.classpath));
+        this.classpath.getJar().getAllClasses().forEach((c) -> c.populateMethodHierarchyRelations(this.classpath));
+        System.err.println("Populated method hierarchies.");
+
+        // Stage 6: hashing
         this.classpath.getJar().hash(salt);
         System.err.println("Hashed jar entries.");
 

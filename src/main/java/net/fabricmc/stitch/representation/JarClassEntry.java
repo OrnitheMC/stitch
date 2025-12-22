@@ -70,14 +70,14 @@ public class JarClassEntry extends AbstractJarEntry
         this.interfaces = Arrays.asList(populator.interfaces);
     }
 
-    protected void populateParents(Classpath storage) {
+    protected void populateSubclasses(Classpath storage) {
         // java/lang/Object does not have a super class
         if (superclass != null) {
             JarClassEntry superEntry = storage.findClass(superclass);
             if (superEntry != null) {
                 superEntry.subclasses.add(name);
                 if (!superEntry.isMainJar(storage)) {
-                    superEntry.populateParents(storage);
+                    superEntry.populateSubclasses(storage);
                 }
             }
         }
@@ -87,19 +87,17 @@ public class JarClassEntry extends AbstractJarEntry
             if (itf != null) {
                 itf.implementers.add(name);
                 if (!itf.isMainJar(storage)) {
-                    itf.populateParents(storage);
+                    itf.populateSubclasses(storage);
                 }
             }
         }
-    }
 
-    protected void populateSpecializedMethods(Classpath storage) {
-        for (JarMethodEntry method : methods.values()) {
-            method.findSpecializedMethod(storage);
+        for (JarMethodEntry m : methods.values()) {
+            m.populateSubclasses(storage, this);
         }
     }
 
-    protected void populateInnerClasses(JarRootEntry storage) {
+    protected void populateInnerClasses(Classpath storage) {
         JarClassEntry declaringEntry = getDeclaringClass(storage);
         if (declaringEntry != null) {
             declaringEntry.innerClasses.put(name, this);
@@ -107,6 +105,79 @@ public class JarClassEntry extends AbstractJarEntry
         JarClassEntry enclosingEntry = getEnclosingClass(storage);
         if (enclosingEntry != null) {
             enclosingEntry.innerClasses.put(name, this);
+        }
+    }
+
+    protected void populateBridgeMethods(Classpath storage) {
+        for (JarMethodEntry method : methods.values()) {
+            method.populateBridgeMethod(storage, this);
+        }
+    }
+
+    protected void populateMethodHierarchies(Classpath storage) {
+        // populate method hierarchies for this class and its super classes
+        // and join existing hierarchies together if they overlap
+
+        // since we're going bottom-up starting only classes without
+        // any sub classes or implementers will suffice
+        if (!subclasses.isEmpty() || !implementers.isEmpty()) {
+            return;
+        }
+
+        Map<String, MethodHierarchy> hierarchies = new HashMap<>();
+        Queue<JarClassEntry> classes = new ArrayDeque<>();
+
+        classes.add(this);
+
+        while (!classes.isEmpty()) {
+            JarClassEntry c = classes.poll();
+
+            for (JarMethodEntry m : c.methods.values()) {
+                if (Access.isPrivateOrStatic(m.access) || m.name.charAt(0) == '<') {
+                    if (m.hierarchy == null) {
+                        m.hierarchy = new MethodHierarchy(c, m);
+                    }
+                } else {
+                    String method = m.getKey();
+                    MethodHierarchy hierarchy = hierarchies.get(method);
+
+                    if (hierarchy == null) {
+                        if (m.hierarchy == null) {
+                            m.hierarchy = new MethodHierarchy(method);
+                            m.hierarchy.addMember(storage, c, m);
+                        }
+
+                        hierarchies.put(m.name + m.desc, m.hierarchy);
+                    } else {
+                        if (m.hierarchy == null) {
+                            hierarchy.addMember(storage, c, m);
+                        } else if (m.hierarchy != hierarchy) {
+                            for (Map.Entry<JarClassEntry, JarMethodEntry> e : m.hierarchy.members.entrySet()) {
+                                hierarchy.addMember(storage, e.getKey(), e.getValue());
+                            }
+                        }
+                    }
+                }
+            }
+
+            JarClassEntry sup = c.getSuperClass(storage);
+            if (sup != null) {
+                classes.add(sup);
+            }
+
+            classes.addAll(c.getInterfaces(storage));
+        }
+    }
+
+    protected void populateMethodHierarchySources(Classpath storage) {
+        for (JarMethodEntry m : methods.values()) {
+            m.hierarchy.populateSources(storage);
+        }
+    }
+
+    protected void populateMethodHierarchyRelations(Classpath storage) {
+        for (JarMethodEntry m : methods.values()) {
+            m.hierarchy.populateRelations(storage);
         }
     }
 

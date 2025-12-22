@@ -23,7 +23,6 @@ import net.fabricmc.stitch.util.StitchUtil;
 
 import java.math.BigInteger;
 import java.util.*;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -61,7 +60,7 @@ public class GenState
     }
 
     public boolean isMappedMethod(Classpath storage, JarClassEntry c, JarMethodEntry m) {
-        return isMappedMethodName(m.getName()) && m.isSource(storage, c) && !isEnumMethod(storage, c, m) && !isSerializable(storage, m);
+        return isMappedMethodName(m.getName()) && m.getHierarchy().isSource(c) && !isEnumMethod(storage, c, m) && !isSerializable(storage, m);
     }
 
     public static boolean isMappedMethodName(String name) {
@@ -115,15 +114,12 @@ public class GenState
     }
 
     String nextMethodName(Map<AbstractJarEntry, String> values, Classpath storage, JarClassEntry c, JarMethodEntry m) {
-        String key = m.getName() + m.getDescriptor();
         Set<JarMethodEntry> ms = new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
-        Set<JarMethodEntry> ns = propagateNames ? null : new TreeSet<>((m1, m2) -> compareSourceMethods(storage, m1, m2));
 
-        findSourceMethod(storage, c, key, ms, ns);
-
-        if (ms.isEmpty()) {
-            // method is most likely private or static
-            return nextName(values, m);
+        if (propagateNames || !m.getHierarchy().isFromMainJar()) {
+            ms.addAll(m.getHierarchy().getRelatedSourceMethods());
+        } else {
+            ms.addAll(m.getHierarchy().getSourceMethods());
         }
 
         Iterator<JarMethodEntry> it = ms.iterator();
@@ -134,11 +130,6 @@ public class GenState
         if (pm.isMainJar(storage)) {
             // for methods from the main jar, do not propagate
             // names through bridge/specialized methods
-            if (!propagateNames) {
-                it = ns.iterator();
-                pm = it.next();
-            }
-
             name = nextName(values, pm);
         } else {
             // for methods inherited from libraries or the JDK
@@ -157,8 +148,8 @@ public class GenState
         boolean main1 = m1.isMainJar(storage);
         boolean main2 = m2.isMainJar(storage);
         if (main1 == main2) {
-            boolean bridge1 = (m1.getBridgeMethod() != null);
-            boolean bridge2 = (m2.getBridgeMethod() != null);
+            boolean bridge1 = (m1.getBridgeMethodName() != null);
+            boolean bridge2 = (m2.getBridgeMethodName() != null);
             if (bridge1 == bridge2) {
                 int c0 = m1.getName().compareTo(m2.getName());
                 if (c0 == 0) {
@@ -222,23 +213,25 @@ public class GenState
 
         String suffix = "." + m.getName() + m.getDescriptor();
 
-        if (m.getSpecializedMethod() != null) {
+        if (m.getSpecializedMethodName() != null) {
             suffix += "(bridge)";
         }
 
-        List<JarClassEntry> matchingClasses = m.getMatchingEntries(storage, c);
+        Set<JarClassEntry> matchingClasses = m.getHierarchy().getClasses();
 
         for (JarClassEntry matchingClass : matchingClasses) {
             JarMethodEntry matchingMethod = matchingClass.getMethod(m.getName() + m.getDescriptor());
             if (matchingMethod != null) {
-                JarMethodEntry bridgeMethod = matchingMethod.getBridgeMethod();
-                JarMethodEntry specializedMethod = matchingMethod.getSpecializedMethod();
                 findNames(storage, storageOld, matchingClass, matchingMethod, newToOld, oldToIntermediary, names, usedMethods, suffix);
-                if (bridgeMethod != null) {
-                    findNames(storage, storageOld, matchingClass, bridgeMethod, newToOld, oldToIntermediary, names, usedMethods);
-                }
-                if (specializedMethod != null) {
-                    findNames(storage, storageOld, matchingClass, specializedMethod, newToOld, oldToIntermediary, names, usedMethods);
+                if (propagateNames || !matchingMethod.getHierarchy().isFromMainJar()) {
+                    JarMethodEntry bridgeMethod = matchingMethod.getBridgeMethod(storage, matchingClass);
+                    JarMethodEntry specializedMethod = matchingMethod.getSpecializedMethod(storage, matchingClass);
+                    if (bridgeMethod != null) {
+                        findNames(storage, storageOld, matchingClass, bridgeMethod, newToOld, oldToIntermediary, names, usedMethods);
+                    }
+                    if (specializedMethod != null) {
+                        findNames(storage, storageOld, matchingClass, specializedMethod, newToOld, oldToIntermediary, names, usedMethods);
+                    }
                 }
             }
         }
@@ -258,14 +251,16 @@ public class GenState
                         names.computeIfAbsent(oldEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storage, c) + suffix);
                     } else {
                         // more involved...
-                        JarMethodEntry bridgeMethod = oldMethod.getBridgeMethod();
-                        JarMethodEntry specializedMethod = oldMethod.getSpecializedMethod();
                         findNames(storageOld, oldClass, oldMethod, oldToIntermediary, names, suffix);
-                        if (bridgeMethod != null) {
-                            findNames(storageOld, oldClass, bridgeMethod, oldToIntermediary, names, suffix);
-                        }
-                        if (specializedMethod != null) {
-                            findNames(storageOld, oldClass, specializedMethod, oldToIntermediary, names, suffix);
+                        if (propagateNames || !oldMethod.getHierarchy().isFromMainJar()) {
+                            JarMethodEntry bridgeMethod = oldMethod.getBridgeMethod(storageOld, oldClass);
+                            JarMethodEntry specializedMethod = oldMethod.getSpecializedMethod(storageOld, oldClass);
+                            if (bridgeMethod != null) {
+                                findNames(storageOld, oldClass, bridgeMethod, oldToIntermediary, names, suffix);
+                            }
+                            if (specializedMethod != null) {
+                                findNames(storageOld, oldClass, specializedMethod, oldToIntermediary, names, suffix);
+                            }
                         }
                     }
                 }
@@ -274,7 +269,7 @@ public class GenState
     }
 
     private void findNames(Classpath storage, JarClassEntry c, JarMethodEntry m, GenMap oldToIntermediary, Map<String, Set<String>> names, String suffix) {
-        List<JarClassEntry> matchingClasses = m.getMatchingEntries(storage, c);
+        Set<JarClassEntry> matchingClasses = m.getHierarchy().getClasses();
         for (JarClassEntry matchingClass : matchingClasses) {
             EntryTriple intermediaryEntry = oldToIntermediary.getMethod(matchingClass.getName(), m.getName(), m.getDescriptor());
             if (intermediaryEntry != null) {
@@ -323,71 +318,6 @@ public class GenState
         }
 
         return builder.toString();
-    }
-
-    void findEquivalentMethods(Classpath storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods, Collection<JarMethodEntry> neighbors) {
-        findSourceMethod(storage, c, key, methods, neighbors);
-
-        for (JarClassEntry cs : c.getSubclasses(storage)) {
-            findEquivalentMethods(storage, cs, key, methods, neighbors);
-        }
-        for (JarClassEntry ci : c.getImplementers(storage)) {
-            findEquivalentMethods(storage, ci, key, methods, neighbors);
-        }
-
-        JarMethodEntry m = c.getMethod(key);
-
-        if (m != null) {
-            JarMethodEntry bm = m.getBridgeMethod();
-            JarMethodEntry sm = m.getSpecializedMethod();
-
-            if (bm != null) {
-                findSourceMethod(storage, c, bm.getName() + bm.getDescriptor(), methods, null);
-            }
-            if (sm != null) {
-                findSourceMethod(storage, c, sm.getName() + sm.getDescriptor(), methods, null);
-            }
-        }
-    }
-
-    boolean findSourceMethod(Classpath storage, JarClassEntry c, String key, Collection<JarMethodEntry> methods, Collection<JarMethodEntry> neighbors) {
-        JarMethodEntry m = c.getMethod(key);
-
-        boolean hasMethod = false;
-        boolean parentsAdded = false;
-
-        if (m != null) {
-            if (Access.isPrivateOrStatic(m.getAccess())) {
-                return false;
-            }
-            if (methods.contains(m)) {
-                return true;
-            }
-
-            hasMethod = true;
-        }
-
-        JarClassEntry sc = c.getSuperClass(storage);
-
-        if (sc != null) {
-            parentsAdded = findSourceMethod(storage, sc, key, methods, neighbors) | parentsAdded;
-        }
-
-        for (JarClassEntry ic : c.getInterfaces(storage)) {
-            parentsAdded = findSourceMethod(storage, ic, key, methods, neighbors) | parentsAdded;
-        }
-
-        if (!parentsAdded && hasMethod) {
-            if (methods.add(m)) {
-                if (neighbors != null) {
-                    neighbors.add(m);
-                }
-
-                findEquivalentMethods(storage, c, key, methods, neighbors);
-            }
-        }
-
-        return parentsAdded || hasMethod;
     }
 
     String stripLocalClassPrefix(String innerName) {

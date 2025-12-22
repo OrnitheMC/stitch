@@ -27,7 +27,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class GenStateSplit extends GenState
 {
@@ -142,22 +141,18 @@ public class GenStateSplit extends GenState
             return nextMethodName(serverValues, storageServer, sc, sm);
         }
 
-        String ckey = cm.getName() + cm.getDescriptor();
-        String skey = sm.getName() + sm.getDescriptor();
         Set<JarMethodEntry> cms = new TreeSet<>((m1, m2) -> compareSourceMethods(storageClient, m1, m2));
-        Set<JarMethodEntry> cns = propagateNames ? null : new TreeSet<>((m1, m2) -> compareSourceMethods(storageClient, m1, m2));
         Set<JarMethodEntry> sms = new TreeSet<>((m1, m2) -> compareSourceMethods(storageServer, m1, m2));
-        Set<JarMethodEntry> sns = propagateNames ? null : new TreeSet<>((m1, m2) -> compareSourceMethods(storageServer, m1, m2));
 
-        findSourceMethod(storageClient, cc, ckey, cms, cns);
-        findSourceMethod(storageServer, sc, skey, sms, sns);
-
-        if (cms.isEmpty() && sms.isEmpty()) {
-            // method is most likely private or static
-            return nextName(cm, sm);
+        if (propagateNames || !cm.getHierarchy().isFromMainJar()) {
+            cms.addAll(cm.getHierarchy().getRelatedSourceMethods());
+        } else {
+            cms.addAll(cm.getHierarchy().getSourceMethods());
         }
-        if (cms.isEmpty() || sms.isEmpty()) {
-            throw new RuntimeException("incompatible method inheritance: client[" + cm + "](" + String.join(", ", cms.stream().map(Object::toString).collect(Collectors.toList())) + ") - server[" + sm + "](" + String.join(", ", sms.stream().map(Object::toString).collect(Collectors.toList())) + ")");
+        if (propagateNames || !sm.getHierarchy().isFromMainJar()) {
+            sms.addAll(sm.getHierarchy().getRelatedSourceMethods());
+        } else {
+            sms.addAll(sm.getHierarchy().getSourceMethods());
         }
 
         Iterator<JarMethodEntry> cit = cms.iterator();
@@ -184,13 +179,6 @@ public class GenStateSplit extends GenState
             if (cmain && smain) {
                 // for methods from the main jars, do not propagate
                 // names through bridge/specialized methods
-                if (!propagateNames) {
-                    cit = cns.iterator();
-                    sit = sns.iterator();
-                    cpm = cit.next();
-                    spm = sit.next();
-                }
-
                 name = nextName(cpm, spm);
             } else {
                 // for methods inherited from libraries or the JDK
@@ -396,8 +384,8 @@ public class GenStateSplit extends GenState
         String cname = null;
         String sname = null;
         if (mName == null) {
-            cname = (cm == null || cm.getName().charAt(0) == '<' || !cm.isSource(storageClient, cc) || isEnumMethod(storageClient, cc, cm)) ? null : cm.getName();
-            sname = (sm == null || sm.getName().charAt(0) == '<' || !sm.isSource(storageServer, sc) || isEnumMethod(storageServer, sc, sm)) ? null : sm.getName();
+            cname = (cm == null || cm.getName().charAt(0) == '<' || !cm.getHierarchy().isSource(cc) || isEnumMethod(storageClient, cc, cm)) ? null : cm.getName();
+            sname = (sm == null || sm.getName().charAt(0) == '<' || !sm.getHierarchy().isSource(sc) || isEnumMethod(storageServer, sc, sm)) ? null : sm.getName();
 
             if (cname != null && sname != null && !cname.equals(sname)) {
                 throw new RuntimeException("conflicting unmapped method names: client[" + cc.getName() + "." + cm.getName() + cm.getDescriptor() + " -> " + cname + "], server[" + sc.getName() + "." + sm.getName() + sm.getDescriptor() + " -> " + sname + "]");
@@ -411,9 +399,9 @@ public class GenStateSplit extends GenState
         }
 
         if (mName != null) {
-            if (cm != null && cm.getName().charAt(0) != '<' && cm.isSource(storageClient, cc) && !isEnumMethod(storageClient, cc, cm))
+            if (cm != null && cm.getName().charAt(0) != '<' && cm.getHierarchy().isSource(cc) && !isEnumMethod(storageClient, cc, cm))
                 cw.write("METHOD\t" + cc.getName() + "\t" + cm.getDescriptor() + "\t" + cm.getName() + "\t" + mName + "\n");
-            if (sm != null && sm.getName().charAt(0) != '<' && sm.isSource(storageServer, sc) && !isEnumMethod(storageServer, sc, sm))
+            if (sm != null && sm.getName().charAt(0) != '<' && sm.getHierarchy().isSource(sc) && !isEnumMethod(storageServer, sc, sm))
                 sw.write("METHOD\t" + sc.getName() + "\t" + sm.getDescriptor() + "\t" + sm.getName() + "\t" + mName + "\n");
         }
     }

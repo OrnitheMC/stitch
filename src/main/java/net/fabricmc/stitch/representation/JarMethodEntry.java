@@ -17,10 +17,6 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.util.StitchUtil;
-
-import java.util.*;
-
 import org.objectweb.asm.Type;
 
 public class JarMethodEntry extends AbstractJarEntry
@@ -28,9 +24,10 @@ public class JarMethodEntry extends AbstractJarEntry
     protected String desc;
     protected String signature;
 
-    String potentialSpecializedMethod;
-    JarMethodEntry bridgeMethod;
-    JarMethodEntry specializedMethod;
+    MethodHierarchy hierarchy;
+
+    String bridgeMethod;
+    String specializedMethod;
 
     protected JarMethodEntry(int access, String name, String desc, String signature, String parentName) {
         super(name, parentName);
@@ -47,30 +44,82 @@ public class JarMethodEntry extends AbstractJarEntry
         return signature;
     }
 
-    void setSpecializedMethod(String specializedMethod) {
-        potentialSpecializedMethod = specializedMethod;
+    public MethodHierarchy getHierarchy() {
+        return hierarchy;
     }
 
-    public JarMethodEntry getSpecializedMethod() {
+    void setSpecializedMethod(String method) {
+        specializedMethod = method;
+    }
+
+    public String getSpecializedMethodName() {
         return specializedMethod;
     }
 
-    public JarMethodEntry getBridgeMethod() {
+    public JarMethodEntry getSpecializedMethod(Classpath storage, JarClassEntry c) {
+        return specializedMethod == null ? null : c.methods.get(specializedMethod);
+    }
+
+    public String getBridgeMethodName() {
         return bridgeMethod;
     }
 
-    void findSpecializedMethod(Classpath storage) {
-        if (potentialSpecializedMethod != null) {
-            JarClassEntry cls = storage.getClass(parentName);
+    public JarMethodEntry getBridgeMethod(Classpath storage, JarClassEntry c) {
+        return bridgeMethod == null ? null : c.methods.get(bridgeMethod);
+    }
 
-            if (existsInSuperClasses(storage, cls, name + desc)) {
-                int i = potentialSpecializedMethod.indexOf('(');
-                String specializedDescriptor = potentialSpecializedMethod.substring(i);
-                
-                if (isBridgeMethod(storage, desc, specializedDescriptor)) {
-                    specializedMethod = cls.methods.get(potentialSpecializedMethod);
-                    specializedMethod.bridgeMethod = this;
-                }
+    public JarClassEntry getParentClass(Classpath storage) {
+        return storage.getClass(parentName);
+    }
+
+    void populateSubclasses(Classpath storage, JarClassEntry c) {
+        if (specializedMethod != null) {
+            JarMethodEntry sm = c.getMethod(specializedMethod);
+
+            if (sm != null) {
+                populateSubclasses(storage);
+                sm.populateSubclasses(storage);
+            }
+        }
+    }
+
+    private void populateSubclasses(Classpath storage) {
+        Type type = Type.getType(desc);
+
+        Type[] argTypes = type.getArgumentTypes();
+        Type returnType = type.getReturnType();
+
+        for (Type argType : argTypes) {
+            populateSubclasses(storage, argType);
+        }
+        populateSubclasses(storage, returnType);
+    }
+
+    private void populateSubclasses(Classpath storage, Type type) {
+        if (type.getSort() == Type.ARRAY) {
+            populateSubclasses(storage, type.getElementType());
+        } else if (type.getSort() == Type.OBJECT) {
+            JarClassEntry c = storage.findClass(type.getInternalName());
+
+            if (c != null && !c.isMainJar(storage)) {
+                c.populateSubclasses(storage);
+            }
+        }
+    }
+
+    void populateBridgeMethod(Classpath storage, JarClassEntry c) {
+        String candidate = specializedMethod;
+        specializedMethod = null;
+
+        if (candidate != null && existsInSuperClasses(storage, c, name + desc)) {
+            int i = candidate.indexOf('(');
+            String candidateDesc = candidate.substring(i);
+
+            if (areMethodsBridgeCompatible(storage, desc, candidateDesc)) {
+                JarMethodEntry sm = c.methods.get(candidate);
+
+                specializedMethod = sm.getKey();
+                sm.bridgeMethod = getKey();
             }
         }
     }
@@ -85,7 +134,7 @@ public class JarMethodEntry extends AbstractJarEntry
         return false;
     }
 
-    private static boolean isBridgeMethod(Classpath storage, String bridgeDescriptor, String specializedDescriptor) {
+    private static boolean areMethodsBridgeCompatible(Classpath storage, String bridgeDescriptor, String specializedDescriptor) {
         Type bridgeType = Type.getType(bridgeDescriptor);
         Type specializedType = Type.getType(specializedDescriptor);
 
@@ -117,10 +166,10 @@ public class JarMethodEntry extends AbstractJarEntry
 
         switch (typeForBridge.getSort()) {
         case Type.OBJECT:
-            JarClassEntry clsForBridge = storage.findClass(typeForBridge.getInternalName());
-            JarClassEntry clsForSpecialized = storage.findClass(typeForSpecialized.getInternalName());
+            JarClassEntry clsForBridge = storage.getClass(typeForBridge.getInternalName());
+            JarClassEntry clsForSpecialized = storage.getClass(typeForSpecialized.getInternalName());
 
-            return areClassesBridgeCompatible(storage, clsForBridge, clsForSpecialized);
+            return areClassTypesBridgeCompatible(storage, clsForBridge, clsForSpecialized);
         case Type.ARRAY:
             if (typeForBridge.getDimensions() != typeForSpecialized.getDimensions()) {
                 return false;
@@ -132,7 +181,7 @@ public class JarMethodEntry extends AbstractJarEntry
         return false;
     }
 
-    private static boolean areClassesBridgeCompatible(Classpath storage, JarClassEntry clsForBridge, JarClassEntry clsForSpecialized) {
+    private static boolean areClassTypesBridgeCompatible(Classpath storage, JarClassEntry clsForBridge, JarClassEntry clsForSpecialized) {
         if (clsForBridge == clsForSpecialized) {
             return true;
         }
@@ -141,7 +190,7 @@ public class JarMethodEntry extends AbstractJarEntry
         }
 
         for (JarClassEntry superClsForSpecialized : clsForSpecialized.getSuperClasses(storage)) {
-            if (areClassesBridgeCompatible(storage, clsForBridge, superClsForSpecialized)) {
+            if (areClassTypesBridgeCompatible(storage, clsForBridge, superClsForSpecialized)) {
                 return true;
             }
         }
@@ -178,77 +227,5 @@ public class JarMethodEntry extends AbstractJarEntry
     @Override
     public boolean isMainJar(Classpath storage) {
         return storage.getClass(parentName).isMainJar(storage);
-    }
-
-    public boolean isSource(Classpath storage, JarClassEntry c) {
-        if (Access.isPrivateOrStatic(getAccess())) {
-            return true;
-        }
-
-        Set<JarClassEntry> entries = StitchUtil.newIdentityHashSet();
-        entries.add(c);
-        getMatchingSources(entries, storage, c, c.isOneSideOnly() ? c.side : side);
-        return entries.size() == 1;
-    }
-
-    public List<JarClassEntry> getMatchingEntries(Classpath storage, JarClassEntry c) {
-        if (Access.isPrivateOrStatic(getAccess())) {
-            return Collections.singletonList(c);
-        }
-
-        Set<JarClassEntry> entries = StitchUtil.newIdentityHashSet();
-        Set<JarClassEntry> entriesNew = StitchUtil.newIdentityHashSet();
-        entries.add(c);
-        int lastSize = 0;
-
-        while (entries.size() > lastSize) {
-            lastSize = entries.size();
-
-            for (JarClassEntry cc : entries) {
-                getMatchingSources(entriesNew, storage, cc, Side.ANY);
-            }
-            entries.addAll(entriesNew);
-            entriesNew.clear();
-
-            for (JarClassEntry cc : entries) {
-                getMatchingEntries(entriesNew, storage, cc, 0);
-            }
-            entries.addAll(entriesNew);
-            entriesNew.clear();
-        }
-
-        entries.removeIf(cc -> cc.getMethod(getKey()) == null);
-
-        return new ArrayList<>(entries);
-    }
-
-    private void getMatchingSources(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c, Side side) {
-        JarMethodEntry m = c.getMethod(getKey());
-        if (m != null) {
-            if ((c.isOneSideOnly() ? side.is(c.side) : side.is(m.side)) && !Access.isPrivateOrStatic(m.getAccess())) {
-                entries.add(c);
-            }
-        }
-
-        JarClassEntry superClass = c.getSuperClass(storage);
-        if (superClass != null) {
-            getMatchingSources(entries, storage, superClass, side);
-        }
-
-        for (JarClassEntry itf : c.getInterfaces(storage)) {
-            getMatchingSources(entries, storage, itf, side);
-        }
-    }
-
-    private void getMatchingEntries(Collection<JarClassEntry> entries, Classpath storage, JarClassEntry c, int indent) {
-        entries.add(c);
-
-        for (JarClassEntry cc : c.getSubclasses(storage)) {
-            getMatchingEntries(entries, storage, cc, indent + 1);
-        }
-
-        for (JarClassEntry cc : c.getImplementers(storage)) {
-            getMatchingEntries(entries, storage, cc, indent + 1);
-        }
     }
 }
