@@ -83,11 +83,13 @@ public class GenStateMerged extends GenState
             for (int i = 0; i < newToOld.size(); i++) {
                 String inheritedName = inheritFieldName(storage, storagesOld.get(i), c, f, newToOld.get(i), oldToIntermediary.get(i));
 
-                if (findName != null && inheritedName != null && !findName.equals(inheritedName)) {
-                    throw new IllegalStateException("illegal field name inheritance: " + c.getName() + "." + f.getName() + " -> [" + findName + ", " + i + ": " + inheritedName + "]");
-                }
+                if (inheritedName != null) {
+                    if (findName != null && !findName.equals(inheritedName)) {
+                        throw new IllegalStateException("illegal field name inheritance: " + c.getName() + "." + f.getName() + " -> [" + findName + ", " + i + ": " + inheritedName + "]");
+                    }
 
-                findName = inheritedName;
+                    findName = inheritedName;
+                }
             }
 
             if (findName != null) {
@@ -173,11 +175,13 @@ public class GenStateMerged extends GenState
             for (int i = 0; i < newToOld.size(); i++) {
                 String inheritedName = inheritMethodName(storage, storagesOld.get(i), c, m, newToOld.get(i), oldToIntermediary.get(i));
 
-                if (findName != null && inheritedName != null && !findName.equals(inheritedName)) {
-                    throw new IllegalStateException("illegal method name inheritance: " + c.getName() + "." + m.getName() + m.getDescriptor() + " -> [" + findName + ", " + i + ": " + inheritedName + "]");
-                }
+                if (inheritedName != null) {
+                    if (findName != null && !findName.equals(inheritedName)) {
+                        throw new IllegalStateException("illegal method name inheritance: " + c.getName() + "." + m.getName() + m.getDescriptor() + " -> [" + findName + ", " + i + ": " + inheritedName + "]");
+                    }
 
-                findName = inheritedName;
+                    findName = inheritedName;
+                }
             }
 
             if (findName != null) {
@@ -224,11 +228,13 @@ public class GenStateMerged extends GenState
                     for (int i = 0; i < newToOld.size(); i++) {
                         Pair<String, String> inheritedName = inheritClassName(fullName, storage, storagesOld.get(i), c, newToOld.get(i), oldToIntermediary.get(i));
 
-                        if (findName != null && inheritedName != null && !findName.equals(inheritedName)) {
-                            throw new IllegalStateException("illegal class name inheritance: " + fullName + " -> [" + (findName.getLeft() == null ? "" : findName.getLeft()) + findName.getRight() + ", " + i + ": " + (inheritedName.getLeft() == null ? "" : inheritedName.getLeft()) + inheritedName.getRight() + "]");
-                        }
+                        if (inheritedName != null) {
+                            if (findName != null && !findName.equals(inheritedName)) {
+                                throw new IllegalStateException("illegal class name inheritance: " + fullName + " -> [" + (findName.getLeft() == null ? "" : findName.getLeft()) + findName.getRight() + ", " + i + ": " + (inheritedName.getLeft() == null ? "" : inheritedName.getLeft()) + inheritedName.getRight() + "]");
+                            }
 
-                        findName = inheritedName;
+                            findName = inheritedName;
+                        }
                     }
 
                     if (findName != null) {
