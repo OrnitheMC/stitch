@@ -338,7 +338,7 @@ public class JarReader
         }
     }
 
-    static JarClassEntry readFromJre(JarRootEntry jar, String name) {
+    static JarClassEntry readFromJdk(JarRootEntry jar, String name) {
         try {
             InputStream is = ClassLoader.getSystemResourceAsStream(name + ".class");
 

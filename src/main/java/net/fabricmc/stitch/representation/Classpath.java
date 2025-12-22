@@ -10,8 +10,8 @@ import net.ornithemc.nester.nest.Nests;
 
 public class Classpath {
 
-    private static JarRootEntry jre;
 
+    final JarRootEntry jdk;
     final JarRootEntry[] classpath;
     final Nests nests;
 
@@ -30,6 +30,7 @@ public class Classpath {
     }
 
     public Classpath(File jar, File nests, Collection<File> libs) throws IOException {
+        this.jdk = new JarRootEntry(new File("."));
         this.classpath = new JarRootEntry[libs.size() + 1];
         this.nests = nests == null ? Nests.empty() : Nests.of(nests.toPath());
 
@@ -45,6 +46,11 @@ public class Classpath {
     }
 
     public Classpath(JarRootEntry jar, Nests nests, JarRootEntry... libs) {
+        try {
+            this.jdk = new JarRootEntry(new File("."));
+        } catch (Throwable t) {
+            throw new RuntimeException("unable to create jdk representation", t);
+        }
         this.classpath = new JarRootEntry[libs.length + 1];
         this.nests = nests;
 
@@ -67,18 +73,6 @@ public class Classpath {
         return this.classpath[0];
     }
 
-    private JarRootEntry getJre() {
-        if (jre == null) {
-            try {
-                jre = new JarRootEntry(new File("."));
-            } catch (Throwable t) {
-                throw new RuntimeException("unable to create jre representation", t);
-            }
-        }
-
-        return jre;
-    }
-
     public Nests getNests() {
         return nests;
     }
@@ -95,7 +89,7 @@ public class Classpath {
                 return c;
             }
         }
-        return getJre().getClass(name, null);
+        return jdk.getClass(name, null);
     }
 
     public JarClassEntry findClass(String name) {
@@ -117,12 +111,12 @@ public class Classpath {
                     }
                 }
             }
-            c = getJre().getClass(name, null);
+            c = jdk.getClass(name, null);
             if (c != null) {
                 return c;
             }
 
-            return JarReader.readFromJre(jre, name);
+            return JarReader.readFromJdk(jdk, name);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
