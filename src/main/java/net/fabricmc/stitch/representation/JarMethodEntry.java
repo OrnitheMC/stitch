@@ -185,6 +185,9 @@ public class JarMethodEntry extends AbstractJarEntry
         if (clsForBridge == clsForSpecialized) {
             return true;
         }
+        if (clsForBridge == null || clsForSpecialized == null) {
+            return false;
+        }
         if ("java/lang/Object".equals(clsForSpecialized.name)) {
             return false;
         }
