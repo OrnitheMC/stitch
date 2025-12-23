@@ -111,7 +111,7 @@ public class JarMethodEntry extends AbstractJarEntry
         String candidate = specializedMethod;
         specializedMethod = null;
 
-        if (candidate != null && existsInSuperClasses(storage, c, name + desc)) {
+        if (candidate != null && c.methods.containsKey(candidate) && existsInSuperClasses(storage, c, name + desc)) {
             int i = candidate.indexOf('(');
             String candidateDesc = candidate.substring(i);
 
