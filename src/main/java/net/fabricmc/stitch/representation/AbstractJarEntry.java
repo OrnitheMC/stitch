@@ -84,7 +84,10 @@ public abstract class AbstractJarEntry
     protected void hash(byte[] parentHash) {
         Main.MESSAGE_DIGEST.reset();
         Main.MESSAGE_DIGEST.update(parentHash);
-        Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
+        // we only care about the actual jar content, so do not add jar file name
+        if (getClass() != JarRootEntry.class) {
+            Main.MESSAGE_DIGEST.update(getKey().getBytes(StandardCharsets.UTF_8));
+        }
         hash = Main.MESSAGE_DIGEST.digest();
     }
 
