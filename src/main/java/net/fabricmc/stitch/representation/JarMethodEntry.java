@@ -160,16 +160,24 @@ public class JarMethodEntry extends AbstractJarEntry
         if (typeForBridge.equals(typeForSpecialized)) {
             return true;
         }
-        if (typeForBridge.getSort() != typeForSpecialized.getSort()) {
+
+        int sortForBridge = typeForBridge.getSort();
+        int sortForSpecialized = typeForSpecialized.getSort();
+
+        if (sortForBridge != sortForSpecialized && !(sortForBridge == Type.OBJECT && sortForSpecialized == Type.ARRAY)) {
             return false;
         }
 
-        switch (typeForBridge.getSort()) {
+        switch (sortForBridge) {
         case Type.OBJECT:
             JarClassEntry clsForBridge = storage.getClass(typeForBridge.getInternalName());
             JarClassEntry clsForSpecialized = storage.getClass(typeForSpecialized.getInternalName());
 
-            return areClassTypesBridgeCompatible(storage, clsForBridge, clsForSpecialized);
+            if (sortForSpecialized == Type.ARRAY) {
+                return "java/lang/Object".equals(clsForBridge.name);
+            } else {
+                return areClassTypesBridgeCompatible(storage, clsForBridge, clsForSpecialized);
+            }
         case Type.ARRAY:
             if (typeForBridge.getDimensions() != typeForSpecialized.getDimensions()) {
                 return false;
