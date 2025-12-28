@@ -11,6 +11,7 @@ import java.util.List;
 
 import com.google.common.primitives.Booleans;
 
+import net.fabricmc.stitch.Main;
 import net.fabricmc.stitch.commands.GenState;
 import net.fabricmc.stitch.commands.GenStateMerged;
 import net.fabricmc.stitch.commands.GenStateSplit;
@@ -50,7 +51,7 @@ public class IntermediaryUtil
             for (Classpath storageOld : storagesOld) {
                 new JarReader(storageOld).apply();
             }
-            new JarReader(storageNew).apply(args.salt.array());
+            new JarReader(storageNew).apply(args.salt);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -119,10 +120,10 @@ public class IntermediaryUtil
                 new JarReader(storageServerOld).apply();
             }
             if (storageClientNew != null) {
-                new JarReader(storageClientNew).apply(args.salt.array());
+                new JarReader(storageClientNew).apply(args.salt);
             }
             if (storageServerNew != null) {
-                new JarReader(storageServerNew).apply(args.salt.array());
+                new JarReader(storageServerNew).apply(args.salt);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -164,13 +165,14 @@ public class IntermediaryUtil
         if (args.nameLength != null) {
             state.setNameLength(args.nameLength);
         }
-        args.salt = ByteBuffer.allocate(256);
+        Main.MESSAGE_DIGEST.reset();
         if (args.clientHash != null) {
-            args.salt.put(args.clientHash.getBytes(StandardCharsets.UTF_8));
+            Main.MESSAGE_DIGEST.update(args.clientHash.getBytes(StandardCharsets.UTF_8));
         }
         if (args.serverHash != null) {
-            args.salt.put(args.serverHash.getBytes(StandardCharsets.UTF_8));
+            Main.MESSAGE_DIGEST.update(args.serverHash.getBytes(StandardCharsets.UTF_8));
         }
+        args.salt = Main.MESSAGE_DIGEST.digest();
     }
 
     public static class Args {
@@ -181,7 +183,7 @@ public class IntermediaryUtil
         Integer nameLength;
         String clientHash;
         String serverHash;
-        ByteBuffer salt;
+        byte[] salt;
 
     }
 
