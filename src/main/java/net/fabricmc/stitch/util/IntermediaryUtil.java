@@ -165,6 +165,9 @@ public class IntermediaryUtil
         if (args.nameLength != null) {
             state.setNameLength(args.nameLength);
         }
+        if (args.propagateNames != null) {
+            state.setPropagateMethodNames(args.propagateNames);
+        }
         Main.MESSAGE_DIGEST.reset();
         if (args.clientHash != null) {
             Main.MESSAGE_DIGEST.update(args.clientHash.getBytes(StandardCharsets.UTF_8));
@@ -181,6 +184,7 @@ public class IntermediaryUtil
         String targetNamespace;
         List<String> obfuscationPatterns = new ArrayList<>();
         Integer nameLength;
+        Boolean propagateNames;
         String clientHash;
         String serverHash;
         byte[] salt;
@@ -213,6 +217,11 @@ public class IntermediaryUtil
 
         public ArgsBuilder nameLength(int length) {
             args().nameLength = length;
+            return this;
+        }
+
+        public ArgsBuilder propagateNames(boolean propagateNames) {
+            args().propagateNames = propagateNames;
             return this;
         }
 
