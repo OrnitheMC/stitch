@@ -152,7 +152,9 @@ public class GenStateMerged extends GenState
                 return s;
             } else {
                 String newName = nextMethodName(storage, c, m);
-                System.out.println(s + " is now " + newName);
+                if (!newName.equals(s)) {
+                    System.out.println(s + " is now " + newName);
+                }
                 return newName;
             }
         }
